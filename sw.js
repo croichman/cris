@@ -1,6 +1,6 @@
 // Service worker do CRIS: guarda os arquivos do app para abrir rápido e sem internet.
 // Ao publicar uma nova versão, aumente o número abaixo.
-const VERSAO = 'cris-v5';
+const VERSAO = 'cris-v6';
 const ARQUIVOS = [
   './',
   'index.html',
@@ -20,7 +20,10 @@ const ARQUIVOS = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSAO).then((c) => c.addAll(ARQUIVOS)).then(() => self.skipWaiting()));
+  // "reload" ignora cópias antigas guardadas pelo navegador e busca a versão publicada
+  e.waitUntil(caches.open(VERSAO)
+    .then((c) => c.addAll(ARQUIVOS.map((u) => new Request(u, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -39,7 +42,7 @@ self.addEventListener('fetch', (e) => {
 
   // Arquivos do app: tenta a internet primeiro (pega atualizações) e cai no cache se estiver offline.
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, url.origin === location.origin ? { cache: 'no-cache' } : undefined)
       .then((resp) => {
         if (resp.ok && (url.origin === location.origin || url.hostname.includes('fonts.g'))) {
           const copia = resp.clone();

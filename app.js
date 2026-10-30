@@ -654,5 +654,16 @@ sb.auth.onAuthStateChange((evento, sessao) => {
 window.addEventListener('hashchange', navegar);
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+    .then((reg) => {
+      // procura versão nova sempre que o app volta para a tela
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+    })
+    .catch(() => {});
+  // quando a versão nova assume, recarrega uma vez para mostrar as novidades
+  let recarregou = false;
+  const tinhaControle = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (tinhaControle && !recarregou) { recarregou = true; location.reload(); }
+  });
 }
