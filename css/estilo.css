@@ -397,10 +397,194 @@ legend {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s, transform 0.2s;
+  width: max-content;
   max-width: calc(100% - 32px);
+  text-align: center;
 }
 #aviso.visivel { opacity: 1; transform: translate(-50%, 0); }
 
 @media (prefers-reduced-motion: reduce) {
   #aviso { transition: none; }
+}
+
+/* ======================================================================
+   Etapa 2: medicamentos e doses
+   ====================================================================== */
+[hidden] { display: none !important; }
+
+.link-discreto {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--tinta-suave);
+  font-weight: 700;
+}
+.acoes-bloco { display: grid; gap: 4px; margin-top: 16px; }
+
+/* Lista de medicamentos */
+.lista-med { list-style: none; padding: 0; margin: 0; }
+.lista-med li + li { border-top: 1px solid var(--linha); }
+.lista-med a {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 0;
+  color: inherit;
+  text-decoration: none;
+}
+.med-nome { font-weight: 700; font-size: 1.08rem; }
+.med-ativo { color: var(--tinta-suave); font-style: italic; font-size: 0.95rem; }
+.med-quando { color: var(--tinta-suave); font-size: 0.95rem; }
+
+.selo-em_uso { background: var(--menta); color: var(--eucalipto-escuro); }
+.selo-suspenso { background: var(--alerta-fundo); color: var(--alerta); }
+.selo-concluido { background: var(--linha); color: var(--tinta-suave); }
+
+/* Cabeçalho do medicamento: a tarja da caixa de remédio */
+.cabeca-med {
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-left: 12px solid var(--cor-perfil, var(--eucalipto));
+  border-radius: var(--raio);
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+.cabeca-med .selo { margin: 0 0 8px; }
+.cabeca-med h1 { font-size: 1.6rem; }
+.med-ativo-grande { font-style: italic; color: var(--tinta-suave); margin: 4px 0 8px; font-size: 1.05rem; }
+.cabeca-med .acesso { margin: 0; }
+
+/* Fotos */
+.miniaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.miniatura {
+  display: flex; flex-direction: column; gap: 6px;
+  color: var(--tinta-suave); text-decoration: none; font-weight: 700; font-size: 0.95rem;
+}
+.miniatura img, .foto-atual img {
+  width: 100%; aspect-ratio: 4 / 3; object-fit: cover;
+  border-radius: var(--raio-pequeno); border: 1px solid var(--linha); background: var(--menta);
+}
+.foto-atual { display: grid; grid-template-columns: 120px 1fr; gap: 12px; align-items: center; margin-bottom: 10px; }
+.marcar-simples { display: flex; gap: 8px; align-items: center; font-weight: 400 !important; }
+.marcar-simples input { width: 22px; min-height: 22px; height: 22px; accent-color: var(--alerta); }
+input[type=file] { padding: 10px; font-size: 0.95rem; }
+
+/* Histórico de doses */
+.historico-doses { list-style: none; padding: 0; margin: 0; }
+.historico-doses li {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 10px 0; border-top: 1px solid var(--linha);
+}
+.historico-doses li:first-child { border-top: 0; padding-top: 0; }
+
+.opcoes { display: grid; gap: 8px; margin-bottom: 8px; }
+.opcoes .marcar { margin-bottom: 0; }
+
+/* Editor de horários */
+.horario {
+  background: var(--superficie);
+  border: 2px solid var(--linha);
+  border-radius: var(--raio-pequeno);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.horario-topo { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.horario-topo input[type=time] { flex: 1; font-size: 1.3rem; font-weight: 700; }
+.dias { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.dia {
+  min-height: 44px;
+  border-radius: 999px;
+  border: 2px solid var(--linha);
+  background: transparent;
+  color: var(--tinta-suave);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.dia[aria-pressed=true] { background: var(--eucalipto); border-color: var(--eucalipto); color: #fff; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .dia[aria-pressed=true] { color: #0F1B18; }
+}
+
+/* Cartão "Doses de hoje" na tela inicial */
+.cartao-hoje {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  margin-bottom: 28px;
+  border-radius: var(--raio);
+  background: var(--eucalipto);
+  color: #fff;
+  text-decoration: none;
+}
+.cartao-hoje .conteudo { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.cartao-hoje .nome { font-weight: 700; font-size: 1.2rem; }
+.cartao-hoje .detalhe { opacity: 0.92; }
+.cartao-hoje .seta { font-size: 1.6rem; }
+.cartao-hoje.com-atraso { background: var(--alerta); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .cartao-hoje { color: #0F1B18; }
+  :root:not([data-theme="light"]) .cartao-hoje.com-atraso { background: #E8A29D; }
+}
+
+/* Doses do dia: o horário é o que se lê primeiro */
+.doses { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.dose {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  overflow: hidden;
+}
+.dose-hora {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 16px 0 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border-right: 1px solid var(--linha);
+  background: var(--menta);
+  color: var(--eucalipto-escuro);
+}
+.dose-atrasada .dose-hora { background: var(--alerta-fundo); color: var(--alerta); }
+.dose-corpo { padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dose-nome { font-weight: 700; font-size: 1.1rem; color: inherit; text-decoration: none; }
+.dose-detalhe { color: var(--tinta-suave); }
+.dose-perfil { display: inline-flex; align-items: center; gap: 6px; font-size: 0.95rem; color: var(--tinta-suave); }
+.dose-perfil .ponto { width: 10px; height: 10px; border-radius: 3px; background: var(--cor-perfil); flex: none; }
+.dose-alerta { color: var(--alerta); font-weight: 700; font-size: 0.95rem; }
+.dose-acoes { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; }
+.dose-acoes .botao { min-height: 48px; }
+.dose-feita { color: var(--eucalipto-escuro); font-weight: 700; margin-top: 6px; }
+.dose-tomado, .dose-pulado { opacity: 0.85; }
+.dose-pulado .dose-feita { color: var(--tinta-suave); }
+.desfazer { align-self: flex-start; min-height: 40px; padding: 0; margin-top: 2px; font-size: 0.95rem; }
+
+/* ======================================================================
+   Termo de consentimento
+   ====================================================================== */
+.termo { max-width: 65ch; }
+.termo h1 { margin-bottom: 4px; }
+.termo h2 { font-size: 1.1rem; margin: 24px 0 8px; }
+.termo p, .termo li { line-height: 1.6; }
+.termo ul { padding-left: 22px; margin: 0 0 12px; }
+.termo li { margin-bottom: 6px; }
+.aceite {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 2px solid var(--linha);
+}
+.aceite .marcar { margin-bottom: 0; }
+.aceite .botoes { margin-top: 12px; gap: 4px; }
+.selo-termo {
+  background: var(--menta);
+  color: var(--eucalipto-escuro);
+  font-weight: 700;
+  padding: 12px 14px;
+  border-radius: var(--raio-pequeno);
+  margin-bottom: 20px;
 }

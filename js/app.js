@@ -1,100 +1,12 @@
-// CRIS — app principal (etapa 1: login, perfis)
-import { createClient } from './vendor/supabase.js';
-import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
-
-const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-});
-
-const app = document.getElementById('app');
-
-// Estado da sessão
-const estado = {
-  sessao: null,
-  eu: null,            // linha da tabela usuarios
-  delegados: [],       // ids de usuários sob minha responsabilidade (sub-master)
-  emailPendente: null  // e-mail aguardando o código
-};
-
-// ======================================================================
-// Utilitários
-// ======================================================================
-const esc = (v) => String(v ?? '')
-  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-
-function aviso(texto) {
-  const el = document.getElementById('aviso');
-  el.textContent = texto;
-  el.classList.add('visivel');
-  clearTimeout(aviso.t);
-  aviso.t = setTimeout(() => el.classList.remove('visivel'), 2600);
-}
-
-function idade(dataNasc) {
-  if (!dataNasc) return null;
-  const n = new Date(dataNasc + 'T12:00:00');
-  const h = new Date();
-  let a = h.getFullYear() - n.getFullYear();
-  if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) a--;
-  return a;
-}
-
-function dataBR(iso) {
-  if (!iso) return '';
-  const [a, m, d] = iso.split('-');
-  return `${d}/${m}/${a}`;
-}
-
-// Cor da "tarja" de cada perfil, sempre a mesma para o mesmo perfil
-const CORES = ['#2F6F62', '#3B5B8C', '#8A4F7D', '#A0522D', '#5B7A2E', '#6A5ACD', '#9C3D54', '#2E7D8C'];
-function corDoPerfil(id) {
-  let h = 0;
-  for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return CORES[h % CORES.length];
-}
-
-function primeiroNome(nome) {
-  return String(nome || '').trim().split(/\s+/)[0] || '';
-}
-
-function mensagemErro(e) {
-  const m = e?.message || String(e);
-  if (/row-level security|permission denied/i.test(m)) return 'Você não tem permissão para fazer isso.';
-  if (/Signups not allowed|not allowed for otp|User not found/i.test(m)) return 'Este e-mail não foi convidado para o CRIS. Peça um convite a quem administra o app.';
-  if (/expired|invalid/i.test(m) && /token|otp/i.test(m)) return 'Código inválido ou vencido. Peça um novo código.';
-  if (/rate limit|security purposes/i.test(m)) return 'Muitas tentativas seguidas. Aguarde um minuto e tente de novo.';
-  if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Sem conexão com a internet. Verifique e tente de novo.';
-  return m;
-}
-
-function ocupado(botao, sim, texto) {
-  if (!botao) return;
-  if (sim) { botao.dataset.texto = botao.textContent; botao.textContent = texto || 'Aguarde…'; botao.disabled = true; }
-  else { botao.textContent = botao.dataset.texto || botao.textContent; botao.disabled = false; }
-}
-
-function mostrarErro(form, msg) {
-  let el = form.querySelector('.erro');
-  if (!el) { el = document.createElement('div'); el.className = 'erro'; el.setAttribute('role', 'alert'); form.prepend(el); }
-  el.textContent = msg;
-}
-
-// ======================================================================
-// Permissões (espelham as regras do banco, só para decidir o que mostrar)
-// ======================================================================
-function acessoAoPerfil(p, compart) {
-  const eu = estado.eu;
-  if (!eu) return null;
-  if (p.dono_id === eu.id || p.usuario_vinculado_id === eu.id) return { nivel: 'gerenciar', rotulo: p.usuario_vinculado_id === eu.id ? 'Você' : 'Seu' };
-  if (eu.papel === 'master') return { nivel: 'gerenciar', rotulo: 'Master' };
-  if (eu.papel === 'submaster' &&
-      (estado.delegados.includes(p.dono_id) || estado.delegados.includes(p.usuario_vinculado_id)))
-    return { nivel: 'editar', rotulo: 'Sob seus cuidados' };
-  const c = compart.find((x) => x.perfil_id === p.id);
-  if (c) return { nivel: c.nivel, rotulo: c.nivel === 'editar' ? 'Pode editar' : 'Só consulta' };
-  return { nivel: 'ver', rotulo: '' };
-}
+// CRIS — app principal: login, perfis, conta e rotas
+import {
+  sb, app, estado, esc, aviso, idade, dataBR, corDoPerfil, primeiroNome, mensagemErro,
+  ocupado, mostrarErro, acessoAoPerfil
+} from './base.js';
+import {
+  blocoMedicamentos, telaListaMedicamentos, telaMedicamento, telaFormMedicamento, telaHoje, resumoDoDia
+} from './medicamentos.js';
+import { telaTermo, telaVerTermo, carregarAceite } from './termo.js';
 
 // ======================================================================
 // Rotas
@@ -104,13 +16,20 @@ const rotas = [
   [/^#\/perfil\/novo$/, () => telaFormPerfil(null)],
   [/^#\/perfil\/([0-9a-f-]{36})$/, (m) => telaPerfil(m[1])],
   [/^#\/perfil\/([0-9a-f-]{36})\/editar$/, (m) => telaFormPerfil(m[1])],
-  [/^#\/conta$/, telaConta]
+  [/^#\/conta$/, telaConta],
+  [/^#\/hoje$/, telaHoje],
+  [/^#\/termo$/, telaVerTermo],
+  [/^#\/perfil\/([0-9a-f-]{36})\/medicamentos$/, (m) => telaListaMedicamentos(m[1])],
+  [/^#\/perfil\/([0-9a-f-]{36})\/medicamento\/novo$/, (m) => telaFormMedicamento(m[1], null)],
+  [/^#\/medicamento\/([0-9a-f-]{36})$/, (m) => telaMedicamento(m[1])],
+  [/^#\/medicamento\/([0-9a-f-]{36})\/editar$/, (m) => telaFormMedicamento(null, m[1])]
 ];
 
 async function navegar() {
   if (!estado.sessao) return telaEntrar();
   if (!estado.eu) await carregarEu();
   if (!estado.eu) return telaSemCadastro();
+  if (!estado.termoAceitoEm) return telaTermo(navegar, sair);
   if (!estado.eu.nome) return telaBoasVindas();
 
   const hash = location.hash || '#/';
@@ -124,8 +43,10 @@ async function navegar() {
 async function carregarEu() {
   const uid = estado.sessao.user.id;
   const { data, error } = await sb.from('usuarios').select('*').eq('id', uid).maybeSingle();
-  if (error) { console.error(error); return; }
+  if (error) { console.error(error); estado.erroEu = error.message; return; }
+  estado.erroEu = null;
   estado.eu = data;
+  if (data) await carregarAceite(uid);
   if (data?.papel === 'submaster') {
     const { data: d } = await sb.from('delegacoes').select('usuario_id').eq('submaster_id', uid);
     estado.delegados = (d || []).map((x) => x.usuario_id);
@@ -217,6 +138,7 @@ function telaSemCadastro() {
       <p class="marca-grande">CRIS</p>
       <div class="tarja-entrada" aria-hidden="true"></div>
       <p>Seu login funcionou, mas seu cadastro no CRIS não foi encontrado. Peça a quem administra o app para conferir o convite.</p>
+      ${estado.erroEu ? `<p class="acesso">Detalhe técnico: ${esc(estado.erroEu)}</p>` : ''}
       <div class="botoes"><button class="botao secundario" id="sair">Sair</button></div>
     </section>`;
   document.getElementById('sair').onclick = sair;
@@ -267,7 +189,7 @@ async function telaInicio() {
     <div class="carregando" style="padding-top:20vh">Carregando perfis…</div>`;
 
   const [{ data: perfis, error }, { data: compart }] = await Promise.all([
-    sb.from('perfis').select('id, nome, data_nascimento, tipo_sanguineo, dono_id, usuario_vinculado_id').order('nome'),
+    sb.from('perfis').select('id, nome, data_nascimento, tipo_sanguineo, dono_id, usuario_vinculado_id, fuso_horario').order('nome'),
     sb.from('compartilhamentos').select('perfil_id, nivel').eq('usuario_id', estado.eu.id)
   ]);
   if (error) {
@@ -286,6 +208,15 @@ async function telaInicio() {
   }
   // O perfil da própria pessoa vem primeiro
   meus.sort((a, b) => (b.usuario_vinculado_id === eu.id) - (a.usuario_vinculado_id === eu.id));
+
+  const resumo = await resumoDoDia(perfis);
+  let textoResumo = '';
+  if (resumo) {
+    const partes = [];
+    if (resumo.atrasadas) partes.push(`${resumo.atrasadas} ${resumo.atrasadas === 1 ? 'atrasada' : 'atrasadas'}`);
+    if (resumo.pendentes) partes.push(`${resumo.pendentes} ${resumo.pendentes === 1 ? 'próxima' : 'próximas'}`);
+    textoResumo = partes.length ? partes.join(', ') : 'Todas as doses de hoje foram registradas';
+  }
 
   const ficha = (p) => {
     const i = idade(p.data_nascimento);
@@ -321,6 +252,15 @@ async function telaInicio() {
       ${eu.papel === 'master' ? '<p>Você é master: vê e edita todos os perfis.</p>' : ''}
       ${eu.papel === 'submaster' ? '<p>Você é sub-master: cuida dos perfis das pessoas sob sua responsabilidade.</p>' : ''}
     </div>
+
+    ${resumo ? `
+      <a class="cartao-hoje ${resumo.atrasadas ? 'com-atraso' : ''}" href="#/hoje">
+        <span class="conteudo">
+          <span class="nome">Doses de hoje</span>
+          <span class="detalhe">${esc(textoResumo)}</span>
+        </span>
+        <span class="seta" aria-hidden="true">›</span>
+      </a>` : ''}
 
     ${perfis.length === 0 ? `
       <div class="vazio">
@@ -385,8 +325,9 @@ async function telaPerfil(id) {
 
     ${textoAcesso ? `<p class="acesso">${textoAcesso}</p>` : ''}
 
+    <div id="bloco-meds"><div class="bloco"><p class="acesso">Carregando medicamentos…</p></div></div>
+
     <ul class="secoes" aria-label="Seções do perfil">
-      <li><strong>Medicamentos</strong><span class="em-breve">próxima etapa</span></li>
       <li><strong>Alergias</strong><span class="em-breve">próxima etapa</span></li>
       <li><strong>Condições de saúde</strong><span class="em-breve">próxima etapa</span></li>
       <li><strong>Médicos</strong><span class="em-breve">próxima etapa</span></li>
@@ -411,6 +352,9 @@ async function telaPerfil(id) {
         </dl>
       </section>` : ''}
   `;
+  const html = await blocoMedicamentos(p.id, podeEditar);
+  const alvo = document.getElementById('bloco-meds');
+  if (alvo) alvo.innerHTML = html;
 }
 
 // ======================================================================
@@ -565,6 +509,9 @@ function telaConta() {
       <dl>
         <dt>E-mail</dt><dd>${esc(eu.email)}</dd>
         <dt>Tipo de acesso</dt><dd>${papel}</dd>
+        <dt>Termo de consentimento</dt>
+        <dd>Aceito em ${new Date(estado.termoAceitoEm).toLocaleDateString('pt-BR')}.
+          <a href="#/termo">Ler o termo</a></dd>
       </dl>
       <div class="botoes"><button class="botao principal" type="submit">Salvar nome</button></div>
     </form>
