@@ -7,6 +7,7 @@ import {
   blocoMedicamentos, telaListaMedicamentos, telaMedicamento, telaFormMedicamento, telaHoje, resumoDoDia
 } from './medicamentos.js';
 import { telaTermo, telaVerTermo, carregarAceite } from './termo.js';
+import { telaFamilia, blocoCompartilhamento, ligarCompartilhamento } from './familia.js';
 
 // ======================================================================
 // Rotas
@@ -19,6 +20,7 @@ const rotas = [
   [/^#\/conta$/, telaConta],
   [/^#\/hoje$/, telaHoje],
   [/^#\/termo$/, telaVerTermo],
+  [/^#\/familia$/, telaFamilia],
   [/^#\/perfil\/([0-9a-f-]{36})\/medicamentos$/, (m) => telaListaMedicamentos(m[1])],
   [/^#\/perfil\/([0-9a-f-]{36})\/medicamento\/novo$/, (m) => telaFormMedicamento(m[1], null)],
   [/^#\/medicamento\/([0-9a-f-]{36})$/, (m) => telaMedicamento(m[1])],
@@ -249,8 +251,8 @@ async function telaInicio() {
 
     <div class="saudacao">
       <h1>Olá, ${esc(primeiroNome(eu.nome))}</h1>
-      ${eu.papel === 'master' ? '<p>Você é master: vê e edita todos os perfis.</p>' : ''}
-      ${eu.papel === 'submaster' ? '<p>Você é sub-master: cuida dos perfis das pessoas sob sua responsabilidade.</p>' : ''}
+      ${eu.papel === 'master' ? '<p>Você é master: vê e edita todos os perfis. <a href="#/familia">Família e acessos</a></p>' : ''}
+      ${eu.papel === 'submaster' ? '<p>Você é sub-master: cuida dos perfis das pessoas sob sua responsabilidade. <a href="#/familia">Família e convites</a></p>' : ''}
     </div>
 
     ${resumo ? `
@@ -334,6 +336,8 @@ async function telaPerfil(id) {
       <li><strong>Vacinas</strong><span class="em-breve">próxima etapa</span></li>
     </ul>
 
+    <div id="bloco-compart"></div>
+
     ${(p.contato_emergencia_nome || p.contato_emergencia_telefone) ? `
       <section class="bloco">
         <h2>Contato de emergência</h2>
@@ -352,9 +356,17 @@ async function telaPerfil(id) {
         </dl>
       </section>` : ''}
   `;
-  const html = await blocoMedicamentos(p.id, podeEditar);
+  const [html, htmlCompart] = await Promise.all([
+    blocoMedicamentos(p.id, podeEditar),
+    acesso.nivel === 'gerenciar' ? blocoCompartilhamento(p) : Promise.resolve('')
+  ]);
   const alvo = document.getElementById('bloco-meds');
   if (alvo) alvo.innerHTML = html;
+  const alvoC = document.getElementById('bloco-compart');
+  if (alvoC && htmlCompart) {
+    alvoC.innerHTML = htmlCompart;
+    ligarCompartilhamento(p.id, () => telaPerfil(id));
+  }
 }
 
 // ======================================================================
@@ -379,7 +391,18 @@ async function telaFormPerfil(id) {
 
   // "Este perfil é meu": só aparece se a pessoa ainda não tem perfil vinculado
   const { data: jaVinculado } = await sb.from('perfis').select('id').eq('usuario_vinculado_id', eu.id).maybeSingle();
-  const mostrarVinculo = !id ? !jaVinculado : (p.usuario_vinculado_id === eu.id || (!p.usuario_vinculado_id && !jaVinculado && p.dono_id === eu.id));
+  const mostrarVinculo = !id ? !jaVinculado : false;
+
+  // Ao editar, quem gerencia o perfil escolhe o login da pessoa (ex.: a mãe passou a usar o CRIS)
+  let opcoesLogin = null;
+  if (id && podeGerenciar) {
+    const [{ data: usuarios }, { data: vinculados }] = await Promise.all([
+      sb.from('usuarios').select('id, nome, email').order('nome'),
+      sb.from('perfis').select('id, usuario_vinculado_id').not('usuario_vinculado_id', 'is', null)
+    ]);
+    const ocupados = new Set((vinculados || []).filter((x) => x.id !== id).map((x) => x.usuario_vinculado_id));
+    opcoesLogin = (usuarios || []).filter((u) => !ocupados.has(u.id));
+  }
 
   const tipos = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
   const voltar = id ? `#/perfil/${id}` : '#/';
@@ -395,6 +418,16 @@ async function telaFormPerfil(id) {
         <label for="nome">Nome completo</label>
         <input id="nome" name="nome" required value="${esc(p.nome)}" autocomplete="off">
       </div>
+
+      ${opcoesLogin ? `
+        <div class="campo">
+          <label for="login">Login desta pessoa no CRIS</label>
+          <select id="login" name="login">
+            <option value="">Não usa o CRIS</option>
+            ${opcoesLogin.map((u) => `<option value="${u.id}" ${p.usuario_vinculado_id === u.id ? 'selected' : ''}>${esc(u.nome || u.email)}${u.id === eu.id ? ' (você)' : ''}</option>`).join('')}
+          </select>
+          <span class="ajuda">Quando a própria pessoa usa o app, ligue o perfil ao login dela: ela passa a ver e editar estes dados.</span>
+        </div>` : ''}
 
       ${mostrarVinculo ? `
         <label class="marcar">
@@ -462,6 +495,7 @@ async function telaFormPerfil(id) {
     };
     if (!dados.nome) return mostrarErro(form, 'Digite o nome.');
     if (mostrarVinculo) dados.usuario_vinculado_id = f.get('meu') ? eu.id : null;
+    if (opcoesLogin) dados.usuario_vinculado_id = f.get('login') || null;
 
     const b = form.querySelector('[type=submit]');
     ocupado(b, true, 'Salvando…');

@@ -60,6 +60,8 @@ export function primeiroNome(nome) {
 
 export function mensagemErro(e) {
   const m = e?.message || String(e);
+  if (/usuario_vinculado_id/i.test(m) && /duplicate|unique/i.test(m)) return 'Esse login já está ligado a outro perfil.';
+  if (/compartilhamentos/i.test(m) && /duplicate|unique/i.test(m)) return 'Este perfil já está compartilhado com essa pessoa.';
   if (/row-level security|permission denied/i.test(m)) return 'Você não tem permissão para fazer isso.';
   if (/Signups not allowed|not allowed for otp|User not found/i.test(m)) return 'Este e-mail não foi convidado para o CRIS. Peça um convite a quem administra o app.';
   if (/expired|invalid/i.test(m) && /token|otp/i.test(m)) return 'Código inválido ou vencido. Peça um novo código.';

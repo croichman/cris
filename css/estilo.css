@@ -588,3 +588,37 @@ input[type=file] { padding: 10px; font-size: 0.95rem; }
   border-radius: var(--raio-pequeno);
   margin-bottom: 20px;
 }
+
+/* ======================================================================
+   Família e compartilhamento
+   ====================================================================== */
+.pessoas { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.pessoa, .pessoas > li {
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bloco .pessoas > li { border: 0; border-top: 1px solid var(--linha); border-radius: 0; padding: 12px 0; }
+.bloco .pessoas > li:first-child { border-top: 0; padding-top: 0; }
+.pessoa-topo > div { display: flex; flex-direction: column; gap: 2px; }
+.pessoa-nome { font-weight: 700; font-size: 1.08rem; }
+.campo-papel { margin: 12px 0 4px; }
+.responsavel {
+  background: var(--menta);
+  border-radius: var(--raio-pequeno);
+  padding: 4px 14px 12px;
+  margin: 8px 0 4px;
+  display: grid;
+  gap: 4px;
+}
+.responsavel legend { float: left; width: 100%; margin: 10px 0 4px; font-size: 0.95rem; }
+.responsavel .marcar-simples { min-height: 40px; }
+.responsavel .marcar-simples input { accent-color: var(--eucalipto); }
+.botao.remover-acesso { align-self: flex-start; color: var(--alerta); padding: 0; margin-top: 4px; }
+.linha-acesso { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 6px; }
+#form-compart { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--linha); }
+.saudacao a { font-weight: 700; }
