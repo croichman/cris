@@ -6,6 +6,7 @@ import {
   DIAS_CURTOS, DIAS_LONGOS, descreverDias, nomesUsuarios,
   enviarFoto, apagarFotos, linksDasFotos
 } from './base.js';
+import { medicosDoPerfil, nomeMedico } from './saude.js';
 
 const SITUACAO = { em_uso: 'Em uso', suspenso: 'Suspenso', concluido: 'Concluído' };
 const FORMAS = ['Comprimido', 'Cápsula', 'Drágea', 'Gotas', 'Xarope', 'Solução oral', 'Suspensão', 'Sachê',
@@ -23,7 +24,7 @@ function resumoHorarios(m) {
   return hs.map((h) => `${hhmm(h.hora)} (${descreverDias(h.dias_semana)})`).join('; ');
 }
 
-const SEL_MED = 'id, perfil_id, nome_comercial, principio_ativo, concentracao, forma, dose, via, posologia, motivo, data_inicio, data_fim, situacao, motivo_suspensao, uso_continuo, se_necessario, observacoes, foto_caixa_path, foto_receita_path, horarios(id, hora, dias_semana, ativo)';
+const SEL_MED = 'id, perfil_id, profissional_id, profissionais(id, nome, especialidade), nome_comercial, principio_ativo, concentracao, forma, dose, via, posologia, motivo, data_inicio, data_fim, situacao, motivo_suspensao, uso_continuo, se_necessario, observacoes, foto_caixa_path, foto_receita_path, horarios(id, hora, dias_semana, ativo)';
 
 // ======================================================================
 // Bloco de medicamentos na página do perfil
@@ -155,6 +156,7 @@ export async function telaMedicamento(id) {
         ${linha('Forma', esc(m.forma))}
         ${linha('Via', esc(m.via))}
         ${linha('Para que serve', esc(m.motivo))}
+        ${linha('Receitado por', m.profissionais ? `<a href="#/perfil/${m.perfil_id}/medico/${m.profissionais.id}">${esc(nomeMedico(m.profissionais))}</a>` : '')}
       </dl>
     </section>
 
@@ -276,7 +278,10 @@ export async function telaFormMedicamento(perfilId, id) {
   if (r.erro) return erroTela(r.erro, '#/');
   if (!r.podeEditar) { location.hash = `#/perfil/${perfilId}`; return; }
 
-  const links = await linksDasFotos([m.foto_caixa_path, m.foto_receita_path]);
+  const [links, medicos] = await Promise.all([
+    linksDasFotos([m.foto_caixa_path, m.foto_receita_path]),
+    medicosDoPerfil(perfilId).catch(() => [])
+  ]);
   const horariosIniciais = (m.horarios || []).filter((h) => h.ativo).sort((a, b) => a.hora.localeCompare(b.hora));
   const voltar = id ? `#/medicamento/${id}` : `#/perfil/${perfilId}`;
 
@@ -324,6 +329,14 @@ export async function telaFormMedicamento(perfilId, id) {
       <div class="campo">
         <label for="motivo">Para que serve</label>
         <input id="motivo" name="motivo" value="${esc(m.motivo)}" placeholder="Ex.: pressão alta">
+      </div>
+      <div class="campo">
+        <label for="medico">Médico que receitou</label>
+        <select id="medico" name="profissional_id">
+          <option value="">Não informado</option>
+          ${medicos.map((x) => `<option value="${x.id}" ${m.profissional_id === x.id ? 'selected' : ''}>${esc(nomeMedico(x))}</option>`).join('')}
+        </select>
+        <span class="ajuda">${medicos.length ? 'Não está na lista?' : 'Nenhum médico cadastrado para esta pessoa.'} Cadastre em "Médicos e profissionais", na página do perfil.</span>
       </div>
 
       <fieldset>
@@ -445,6 +458,7 @@ export async function telaFormMedicamento(perfilId, id) {
         dose: txt('dose'),
         via: txt('via'),
         motivo: txt('motivo'),
+        profissional_id: txt('profissional_id'),
         posologia: txt('posologia'),
         data_inicio: txt('data_inicio'),
         data_fim: txt('data_fim'),

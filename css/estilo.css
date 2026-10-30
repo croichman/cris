@@ -622,3 +622,86 @@ input[type=file] { padding: 10px; font-size: 0.95rem; }
 .linha-acesso { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 6px; }
 #form-compart { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--linha); }
 .saudacao a { font-weight: 700; }
+
+/* ======================================================================
+   Etapa 4: alergias, condições, vacinas, médicos e ficha de emergência
+   ====================================================================== */
+.bloco-alerta { border: 2px solid var(--alerta); }
+.bloco-alerta h2 { color: var(--alerta); }
+.item-fixo { display: flex; flex-direction: column; gap: 2px; padding: 12px 0; }
+.link-foto { display: inline-flex; min-height: 40px; align-items: center; font-weight: 700; font-size: 0.95rem; margin-top: -6px; }
+.contatos { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 10px; }
+.contato {
+  display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px;
+  border: 2px solid var(--linha); border-radius: 999px;
+  font-weight: 700; font-size: 0.95rem; text-decoration: none; color: var(--eucalipto);
+  background: var(--superficie);
+}
+h2.ou { font-size: 1rem; color: var(--tinta-suave); margin: 8px 0 16px; }
+
+/* Atalho para a ficha na página do perfil */
+.botao-ficha {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 20px; margin-bottom: 16px;
+  background: var(--superficie);
+  border: 2px solid var(--alerta);
+  border-radius: var(--raio);
+  color: var(--tinta); text-decoration: none;
+}
+.botao-ficha strong { color: var(--alerta); font-size: 1.1rem; }
+.botao-ficha .detalhe { color: var(--tinta-suave); font-size: 0.95rem; }
+.botao-ficha > span:first-child { flex: 1; }
+.botao-ficha .seta { font-size: 1.6rem; color: var(--alerta); }
+
+.aviso-offline {
+  background: #FFF4D6; color: #6B4A00; font-weight: 700;
+  padding: 12px 14px; border-radius: var(--raio-pequeno); margin-bottom: 16px;
+}
+
+/* Ficha de emergência: legível de longe, sem enfeite */
+.ficha-emergencia {
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  overflow: hidden;
+}
+.fe-topo { background: var(--alerta); color: #fff; padding: 20px; }
+.fe-topo h1 { font-size: 2rem; margin: 2px 0 4px; }
+.fe-topo p { margin: 0; }
+.fe-rotulo { font-weight: 700; opacity: 0.9; }
+.fe-resumo { display: grid; grid-template-columns: 1fr 1fr; margin: 0; border-bottom: 1px solid var(--linha); }
+.fe-resumo div { padding: 14px 20px; }
+.fe-resumo div + div { border-left: 1px solid var(--linha); }
+.fe-resumo dt { font-size: 0.85rem; color: var(--tinta-suave); }
+.fe-resumo dd { margin: 0; font-weight: 700; font-size: 1.3rem; }
+.fe-secao { padding: 16px 20px; border-bottom: 1px solid var(--linha); }
+.fe-secao h2 { font-size: 1.1rem; margin-bottom: 8px; }
+.fe-secao ul { margin: 0; padding-left: 20px; }
+.fe-secao li { margin-bottom: 8px; }
+.fe-secao p { margin: 0; }
+.fe-alergias { background: var(--alerta-fundo); }
+.fe-alergias h2, .fe-alergias li { color: var(--alerta); }
+.fe-alergias li { font-size: 1.1rem; }
+.fe-meds li span { display: block; }
+.fe-sub { color: var(--tinta-suave); font-size: 0.95rem; }
+.fe-contato { font-size: 1.15rem; font-weight: 700; }
+.fe-contato a { margin-left: 6px; }
+.fe-rodape { padding: 12px 20px; margin: 0; font-size: 0.85rem; color: var(--tinta-suave); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .fe-topo { background: #8C2A24; }
+  :root:not([data-theme="light"]) .aviso-offline { background: #3D3214; color: #F0D58C; }
+}
+
+@media print {
+  body { background: #fff; color: #000; font-size: 12pt; }
+  #app { max-width: none; padding: 0; }
+  .nao-imprimir, #aviso, .aviso-offline { display: none !important; }
+  .ficha-emergencia { border: 1px solid #999; }
+  .fe-topo { background: #fff !important; color: #000 !important; border-bottom: 3px solid #000; }
+  .fe-alergias { background: #fff !important; }
+  .fe-alergias h2, .fe-alergias li { color: #000 !important; }
+  .contatos { display: none; }
+  a { color: #000; text-decoration: none; }
+}
+.lista-med a.link-foto { display: inline-flex; flex-direction: row; padding: 0; color: var(--eucalipto); }
+.lista-med a.contato { display: inline-flex; flex-direction: row; padding: 0 14px; color: var(--eucalipto); }

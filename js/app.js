@@ -8,6 +8,8 @@ import {
 } from './medicamentos.js';
 import { telaTermo, telaVerTermo, carregarAceite } from './termo.js';
 import { telaFamilia, blocoCompartilhamento, ligarCompartilhamento } from './familia.js';
+import { blocoItens, telaFormItem, blocoMedicos, telaFormMedico } from './saude.js';
+import { telaFicha, atualizarFichas, htmlFichasOffline, fichasSalvas, apagarFichasSalvas } from './emergencia.js';
 
 // ======================================================================
 // Rotas
@@ -21,6 +23,11 @@ const rotas = [
   [/^#\/hoje$/, telaHoje],
   [/^#\/termo$/, telaVerTermo],
   [/^#\/familia$/, telaFamilia],
+  [/^#\/ficha\/([0-9a-f-]{36})$/, (m) => telaFicha(m[1])],
+  [/^#\/perfil\/([0-9a-f-]{36})\/(alergia|condicao|vacina)\/novo$/, (m) => telaFormItem(m[2], m[1], null)],
+  [/^#\/(alergia|condicao|vacina)\/([0-9a-f-]{36})$/, (m) => telaFormItem(m[1], null, m[2])],
+  [/^#\/perfil\/([0-9a-f-]{36})\/medico\/novo$/, (m) => telaFormMedico(m[1], null)],
+  [/^#\/perfil\/([0-9a-f-]{36})\/medico\/([0-9a-f-]{36})$/, (m) => telaFormMedico(m[1], m[2])],
   [/^#\/perfil\/([0-9a-f-]{36})\/medicamentos$/, (m) => telaListaMedicamentos(m[1])],
   [/^#\/perfil\/([0-9a-f-]{36})\/medicamento\/novo$/, (m) => telaFormMedicamento(m[1], null)],
   [/^#\/medicamento\/([0-9a-f-]{36})$/, (m) => telaMedicamento(m[1])],
@@ -28,11 +35,14 @@ const rotas = [
 ];
 
 async function navegar() {
+  const fichaOffline = (location.hash || '').match(/^#\/ficha\/([0-9a-f-]{36})$/);
+  if (!estado.sessao && fichaOffline) return telaFicha(fichaOffline[1]);
   if (!estado.sessao) return telaEntrar();
   if (!estado.eu) await carregarEu();
   if (!estado.eu) return telaSemCadastro();
   if (!estado.termoAceitoEm) return telaTermo(navegar, sair);
   if (!estado.eu.nome) return telaBoasVindas();
+  if (!estado.offline) gravarLocal('cris-eu', { eu: estado.eu, termoAceitoEm: estado.termoAceitoEm, delegados: estado.delegados });
 
   const hash = location.hash || '#/';
   for (const [re, fn] of rotas) {
@@ -44,9 +54,25 @@ async function navegar() {
 
 async function carregarEu() {
   const uid = estado.sessao.user.id;
+  const salvoAntes = lerLocal('cris-eu');
+  if (!navigator.onLine && salvoAntes?.eu?.id === uid) {
+    Object.assign(estado, salvoAntes, { offline: true });
+    return;
+  }
   const { data, error } = await sb.from('usuarios').select('*').eq('id', uid).maybeSingle();
-  if (error) { console.error(error); estado.erroEu = error.message; return; }
+  if (error) {
+    console.error(error);
+    // Sem internet: usa os dados da última vez, para a ficha de emergência continuar acessível
+    const salvo = lerLocal('cris-eu');
+    if (/fetch|network|load failed/i.test(error.message) && salvo?.eu?.id === uid) {
+      Object.assign(estado, salvo, { offline: true });
+      return;
+    }
+    estado.erroEu = error.message;
+    return;
+  }
   estado.erroEu = null;
+  estado.offline = false;
   estado.eu = data;
   if (data) await carregarAceite(uid);
   if (data?.papel === 'submaster') {
@@ -55,7 +81,11 @@ async function carregarEu() {
   } else {
     estado.delegados = [];
   }
+  if (data) gravarLocal('cris-eu', { eu: data, termoAceitoEm: estado.termoAceitoEm, delegados: estado.delegados });
 }
+
+function lerLocal(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }
+function gravarLocal(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sem armazenamento */ } }
 
 // ======================================================================
 // Tela: entrar (código por e-mail)
@@ -94,6 +124,7 @@ function telaEntrar() {
         </form>
       `}
 
+      ${!navigator.onLine ? htmlFichasOffline() : ''}
       <p class="homenagem">Feito em homenagem a Cristina.</p>
     </section>`;
 
@@ -183,6 +214,13 @@ function telaBoasVindas() {
 // Tela: início (lista de perfis)
 // ======================================================================
 async function telaInicio() {
+  if (!navigator.onLine) {
+    app.innerHTML = `
+      <header class="topo"><span class="marca">CRIS</span></header>
+      <p class="aviso-offline">Sem internet. As fichas de emergência salvas neste aparelho continuam disponíveis.</p>
+      ${htmlFichasOffline() || '<p class="acesso">Nenhuma ficha salva neste aparelho ainda.</p>'}`;
+    return;
+  }
   app.innerHTML = `
     <header class="topo">
       <span class="marca">CRIS</span>
@@ -195,7 +233,7 @@ async function telaInicio() {
     sb.from('compartilhamentos').select('perfil_id, nivel').eq('usuario_id', estado.eu.id)
   ]);
   if (error) {
-    app.querySelector('.carregando').outerHTML = `<div class="erro">${esc(mensagemErro(error))}</div>`;
+    app.querySelector('.carregando').outerHTML = `<div class="erro">${esc(mensagemErro(error))}</div>${htmlFichasOffline()}`;
     return;
   }
 
@@ -212,6 +250,14 @@ async function telaInicio() {
   meus.sort((a, b) => (b.usuario_vinculado_id === eu.id) - (a.usuario_vinculado_id === eu.id));
 
   const resumo = await resumoDoDia(perfis);
+
+  // Mantém as fichas de emergência de quem a pessoa acompanha salvas no aparelho (no máximo a cada 6 horas)
+  const acompanhados = [...meus, ...cuidados, ...compartilhados];
+  const ultima = Number(lerLocal('cris-fichas-em') || 0);
+  if (acompanhados.length && Date.now() - ultima > 6 * 3600000) {
+    gravarLocal('cris-fichas-em', Date.now());
+    setTimeout(() => atualizarFichas(acompanhados), 1500);
+  }
   let textoResumo = '';
   if (resumo) {
     const partes = [];
@@ -327,14 +373,17 @@ async function telaPerfil(id) {
 
     ${textoAcesso ? `<p class="acesso">${textoAcesso}</p>` : ''}
 
-    <div id="bloco-meds"><div class="bloco"><p class="acesso">Carregando medicamentos…</p></div></div>
+    <a class="botao-ficha" href="#/ficha/${p.id}">
+      <span><strong>Ficha de emergência</strong><br>
+      <span class="detalhe">O essencial para um atendimento. Abre mesmo sem internet.</span></span>
+      <span class="seta" aria-hidden="true">›</span>
+    </a>
 
-    <ul class="secoes" aria-label="Seções do perfil">
-      <li><strong>Alergias</strong><span class="em-breve">próxima etapa</span></li>
-      <li><strong>Condições de saúde</strong><span class="em-breve">próxima etapa</span></li>
-      <li><strong>Médicos</strong><span class="em-breve">próxima etapa</span></li>
-      <li><strong>Vacinas</strong><span class="em-breve">próxima etapa</span></li>
-    </ul>
+    <div id="bloco-alergia"></div>
+    <div id="bloco-meds"><div class="bloco"><p class="acesso">Carregando…</p></div></div>
+    <div id="bloco-condicao"></div>
+    <div id="bloco-medicos"></div>
+    <div id="bloco-vacina"></div>
 
     <div id="bloco-compart"></div>
 
@@ -356,12 +405,21 @@ async function telaPerfil(id) {
         </dl>
       </section>` : ''}
   `;
-  const [html, htmlCompart] = await Promise.all([
+  const [html, htmlCompart, hAlergia, hCondicao, hMedicos, hVacina] = await Promise.all([
     blocoMedicamentos(p.id, podeEditar),
-    acesso.nivel === 'gerenciar' ? blocoCompartilhamento(p) : Promise.resolve('')
+    acesso.nivel === 'gerenciar' ? blocoCompartilhamento(p) : Promise.resolve(''),
+    blocoItens('alergia', p.id, podeEditar),
+    blocoItens('condicao', p.id, podeEditar),
+    blocoMedicos(p.id, podeEditar),
+    blocoItens('vacina', p.id, podeEditar)
   ]);
-  const alvo = document.getElementById('bloco-meds');
-  if (alvo) alvo.innerHTML = html;
+  if (!location.hash.endsWith(p.id)) return; // a pessoa já saiu desta tela
+  const por = (idEl, h) => { const el = document.getElementById(idEl); if (el) el.innerHTML = h; };
+  por('bloco-meds', html);
+  por('bloco-alergia', hAlergia);
+  por('bloco-condicao', hCondicao);
+  por('bloco-medicos', hMedicos);
+  por('bloco-vacina', hVacina);
   const alvoC = document.getElementById('bloco-compart');
   if (alvoC && htmlCompart) {
     alvoC.innerHTML = htmlCompart;
@@ -569,7 +627,11 @@ function telaConta() {
 }
 
 async function sair() {
-  await sb.auth.signOut();
+  apagarFichasSalvas();
+  estado.sessao = null;
+  try { await sb.auth.signOut(); } catch { /* sem internet: a sessão local é apagada mesmo assim */ }
+  apagarFichasSalvas();
+  try { localStorage.removeItem('cris-eu'); } catch { /* nada */ }
   estado.eu = null;
   location.hash = '#/';
 }
@@ -592,5 +654,16 @@ sb.auth.onAuthStateChange((evento, sessao) => {
 window.addEventListener('hashchange', navegar);
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+    .then((reg) => {
+      // procura versão nova sempre que o app volta para a tela
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+    })
+    .catch(() => {});
+  // quando a versão nova assume, recarrega uma vez para mostrar as novidades
+  let recarregou = false;
+  const tinhaControle = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (tinhaControle && !recarregou) { recarregou = true; location.reload(); }
+  });
 }
