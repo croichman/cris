@@ -3,7 +3,7 @@ import { sb, app, estado, esc, aviso, dataBR, primeiroNome, mensagemErro, ocupad
 
 const PAPEIS = { master: 'Master', submaster: 'Sub-master', membro: 'Membro' };
 const DESC_PAPEL = {
-  master: 'Vê e edita todos os perfis, define papéis e remove acessos.',
+  master: 'Vê e edita todos os perfis da família, define papéis e remove acessos.',
   submaster: 'Vê e edita os perfis das pessoas sob sua responsabilidade e pode convidar.',
   membro: 'Vê e edita os próprios perfis e os que forem compartilhados com ele.'
 };
@@ -11,7 +11,7 @@ const DESC_PAPEL = {
 const nomeOuEmail = (u) => u?.nome || u?.email || 'Alguém';
 
 // Chama a função "familia" no servidor e devolve a mensagem de erro em português
-async function chamarFuncao(corpo) {
+export async function chamarFuncao(corpo) {
   const { data, error } = await sb.functions.invoke('familia', { body: corpo });
   if (!error) return { ok: true, data };
   let msg = error.message;
@@ -143,8 +143,8 @@ export async function telaFamilia() {
 
   app.innerHTML = `
     <header class="topo"><a class="voltar" href="#/">‹ Perfis</a></header>
-    <h1 style="margin-bottom:6px">Família</h1>
-    <p class="acesso">${usuarios.length} ${usuarios.length === 1 ? 'pessoa tem' : 'pessoas têm'} acesso ao CRIS.
+    <h1 style="margin-bottom:6px">${esc(estado.familia || 'Família')}</h1>
+    <p class="acesso">${usuarios.length} ${usuarios.length === 1 ? 'pessoa da família tem' : 'pessoas da família têm'} acesso ao CRIS.
       ${submasters.length ? '' : 'Para dar a alguém a responsabilidade por outros familiares, mude o tipo de acesso dele para sub-master.'}</p>
 
     ${formConvite('Convidar familiar', 'A pessoa recebe um e-mail com as instruções para entrar. Ela começa como membro: depois você pode mudar o tipo de acesso.')}
@@ -152,9 +152,31 @@ export async function telaFamilia() {
     <section class="grupo">
       <h2>Pessoas com acesso</h2>
       <ul class="pessoas">${usuarios.map(cartao).join('')}</ul>
-    </section>`;
+    </section>
+
+    <form id="form-nome-familia" class="bloco" novalidate>
+      <h2>Nome da família</h2>
+      <div class="campo"><label for="nome-familia">Como a família aparece no app</label>
+        <input id="nome-familia" name="nome" maxlength="80" value="${esc(estado.familia || '')}"></div>
+      <button class="botao secundario" type="submit">Salvar nome</button>
+    </form>`;
 
   ligarConvite(telaFamilia);
+
+  const formNome = document.getElementById('form-nome-familia');
+  formNome.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const nome = formNome.nome.value.trim();
+    if (!nome) return mostrarErro(formNome, 'Digite o nome da família.');
+    const b = formNome.querySelector('[type=submit]');
+    ocupado(b, true, 'Salvando…');
+    const { error: e } = await sb.from('familias').update({ nome }).eq('id', eu.familia_id);
+    ocupado(b, false);
+    if (e) return mostrarErro(formNome, mensagemErro(e));
+    estado.familia = nome;
+    aviso('Nome da família salvo');
+    telaFamilia();
+  });
 
   app.querySelectorAll('.mudar-papel').forEach((sel) => sel.onchange = async () => {
     const u = porId[sel.dataset.id];

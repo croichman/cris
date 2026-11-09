@@ -1,15 +1,18 @@
 // CRIS — termo de consentimento
-// Ao mudar o texto de forma relevante, aumente TERMO_VERSAO aqui e em
-// termo_versao_atual() no banco: todos precisarão aceitar de novo.
+// Ao mudar o texto de forma relevante: aumente TERMO_VERSAO aqui, publique o app e
+// depois mude termo_versao_atual() no banco. A versão exigida vem sempre do banco,
+// então todos precisarão aceitar de novo assim que o banco mudar.
 import { sb, app, estado, esc, aviso, mensagemErro, ocupado, mostrarErro } from './base.js';
 
-export const TERMO_VERSAO = 1;
-export const TERMO_DATA = '30/10/2026';
+export const TERMO_VERSAO = 2;          // versão do texto abaixo
+export const TERMO_DATA = '09/11/2026';
+const ADMIN_SISTEMA = 'Carlos Roichman'; // responsável pelo CRIS
 
 async function nomesDosMasters() {
+  // As regras do banco só mostram pessoas da própria família
   const { data } = await sb.from('usuarios').select('nome, email').eq('papel', 'master').order('nome');
   const nomes = (data || []).map((u) => u.nome || u.email).filter(Boolean);
-  if (!nomes.length) return 'os administradores do app';
+  if (!nomes.length) return 'os responsáveis pela sua família no app';
   if (nomes.length === 1) return nomes[0];
   return nomes.slice(0, -1).join(', ') + ' e ' + nomes[nomes.length - 1];
 }
@@ -21,9 +24,10 @@ async function textoDoTermo() {
       <h1>Termo de consentimento</h1>
       <p class="acesso">Versão ${TERMO_VERSAO}, de ${TERMO_DATA}</p>
 
-      <p>O CRIS é um app de uso exclusivo da família, sem fins comerciais. Ele serve para registrar
-      medicamentos, médicos, vacinas e outras informações de saúde, e para facilitar o cuidado entre
-      familiares. Para usar o app, você precisa ler e concordar com este termo.</p>
+      <p>O CRIS é um app de uso familiar, em fase de testes (Beta) e sem fins comerciais. Ele serve
+      para registrar medicamentos, médicos, vacinas e outras informações de saúde, e para facilitar o
+      cuidado entre familiares. Cada família usa o app separadamente: as informações de uma família não
+      ficam visíveis para as outras. Para usar o app, você precisa ler e concordar com este termo.</p>
 
       <h2>Quais dados são registrados</h2>
       <ul>
@@ -39,18 +43,25 @@ async function textoDoTermo() {
       <h2>Para que os dados são usados</h2>
       <p>Somente para organizar tratamentos, lembrar horários de remédios, ter as informações à mão
       numa emergência e apresentá-las a profissionais de saúde. Os dados não são vendidos, não são
-      usados para publicidade e não são compartilhados fora da família.</p>
+      usados para publicidade e não são compartilhados fora da sua família.</p>
 
       <h2>Quem pode ver os seus dados</h2>
       <ul>
         <li><strong>Você</strong>, nos perfis que são seus ou que você cadastrou.</li>
-        <li><strong>Os masters do app</strong>, que podem ver e editar todos os perfis. Hoje: ${masters}.</li>
+        <li><strong>Os masters da sua família</strong>, que podem ver e editar todos os perfis da família. Hoje: ${masters}.</li>
         <li><strong>Sub-masters</strong>, quando você estiver sob a responsabilidade de um deles.</li>
         <li><strong>Familiares com quem um perfil for compartilhado</strong>, só para consulta ou também
         para edição, conforme definido por quem gerencia o perfil.</li>
       </ul>
       <p>Ao aceitar, você concorda de forma expressa que essas pessoas acessem os seus dados de saúde
-      nessas condições.</p>
+      nessas condições. Pessoas de outras famílias não têm acesso aos seus dados.</p>
+
+      <h2>Administração do app</h2>
+      <p>O CRIS é mantido por ${esc(ADMIN_SISTEMA)}, administrador do sistema. Ele cria as famílias e
+      convida quem vai ser master de cada uma, e por isso consegue ver o nome das famílias, o nome e o
+      e-mail dos masters e a quantidade de pessoas e perfis de cada família. As regras do banco de dados
+      <strong>não permitem</strong> que o administrador veja informações de saúde de outras famílias.
+      Ele só tem acesso aos dados da família da qual ele mesmo faz parte, como qualquer outro master.</p>
 
       <h2>Dados de outras pessoas</h2>
       <p>Só cadastre informações de outra pessoa se você for responsável por ela, como filhos menores
@@ -68,7 +79,7 @@ async function textoDoTermo() {
 
       <h2>Seus direitos</h2>
       <p>Você pode consultar, corrigir e excluir os seus dados a qualquer momento. Para retirar este
-      consentimento, peça a um master: ele encerrará o seu acesso e, se você pedir, excluirá os seus
+      consentimento, peça a um master da sua família: ele encerrará o seu acesso e, se você pedir, excluirá os seus
       dados. A retirada não afeta o uso feito antes dela.</p>
 
       <h2>Mudanças neste termo</h2>
@@ -106,7 +117,7 @@ export async function telaTermo(aoAceitar, aoRecusar) {
     ocupado(aceitar, true, 'Registrando…');
     const { error } = await sb.from('termo_aceites').insert({
       usuario_id: estado.eu.id,
-      versao: TERMO_VERSAO,
+      versao: estado.termoVersao || TERMO_VERSAO,
       dispositivo: navigator.userAgent.slice(0, 200)
     });
     ocupado(aceitar, false);
@@ -129,9 +140,11 @@ export async function telaVerTermo() {
     ${texto}`;
 }
 
-// Busca o aceite da versão atual
+// Busca o aceite da versão exigida pelo banco
 export async function carregarAceite(uid) {
+  const { data: v } = await sb.rpc('termo_versao_atual');
+  estado.termoVersao = Number(v) || TERMO_VERSAO;
   const { data } = await sb.from('termo_aceites').select('aceito_em')
-    .eq('usuario_id', uid).eq('versao', TERMO_VERSAO).maybeSingle();
+    .eq('usuario_id', uid).eq('versao', estado.termoVersao).maybeSingle();
   estado.termoAceitoEm = data?.aceito_em || null;
 }

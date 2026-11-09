@@ -10,6 +10,7 @@ import { VERSAO_APP } from './config.js';
 import { telaTermo, telaVerTermo, carregarAceite } from './termo.js';
 import { telaFamilia, blocoCompartilhamento, ligarCompartilhamento } from './familia.js';
 import { blocoItens, telaFormItem, blocoMedicos, telaFormMedico } from './saude.js';
+import { telaAdmin } from './admin.js';
 import { telaFicha, atualizarFichas, htmlFichasOffline, fichasSalvas, apagarFichasSalvas } from './emergencia.js';
 
 // ======================================================================
@@ -24,6 +25,7 @@ const rotas = [
   [/^#\/hoje$/, telaHoje],
   [/^#\/termo$/, telaVerTermo],
   [/^#\/familia$/, telaFamilia],
+  [/^#\/admin$/, telaAdmin],
   [/^#\/ficha\/([0-9a-f-]{36})$/, (m) => telaFicha(m[1])],
   [/^#\/perfil\/([0-9a-f-]{36})\/(alergia|condicao|vacina)\/novo$/, (m) => telaFormItem(m[2], m[1], null)],
   [/^#\/(alergia|condicao|vacina)\/([0-9a-f-]{36})$/, (m) => telaFormItem(m[1], null, m[2])],
@@ -43,7 +45,7 @@ async function navegar() {
   if (!estado.eu) return telaSemCadastro();
   if (!estado.termoAceitoEm) return telaTermo(navegar, sair);
   if (!estado.eu.nome) return telaBoasVindas();
-  if (!estado.offline) gravarLocal('cris-eu', { eu: estado.eu, termoAceitoEm: estado.termoAceitoEm, delegados: estado.delegados });
+  if (!estado.offline) gravarLocal('cris-eu', { eu: estado.eu, termoAceitoEm: estado.termoAceitoEm, delegados: estado.delegados, familia: estado.familia });
 
   const hash = location.hash || '#/';
   for (const [re, fn] of rotas) {
@@ -76,13 +78,17 @@ async function carregarEu() {
   estado.offline = false;
   estado.eu = data;
   if (data) await carregarAceite(uid);
+  if (data?.familia_id) {
+    const { data: f } = await sb.from('familias').select('nome').eq('id', data.familia_id).maybeSingle();
+    estado.familia = f?.nome || '';
+  }
   if (data?.papel === 'submaster') {
     const { data: d } = await sb.from('delegacoes').select('usuario_id').eq('submaster_id', uid);
     estado.delegados = (d || []).map((x) => x.usuario_id);
   } else {
     estado.delegados = [];
   }
-  if (data) gravarLocal('cris-eu', { eu: data, termoAceitoEm: estado.termoAceitoEm, delegados: estado.delegados });
+  if (data) gravarLocal('cris-eu', { eu: data, termoAceitoEm: estado.termoAceitoEm, delegados: estado.delegados, familia: estado.familia });
 }
 
 function lerLocal(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }
@@ -298,8 +304,10 @@ async function telaInicio() {
 
     <div class="saudacao">
       <h1>Olá, ${esc(primeiroNome(eu.nome))}</h1>
-      ${eu.papel === 'master' ? '<p>Você é master: vê e edita todos os perfis. <a href="#/familia">Família e acessos</a></p>' : ''}
+      ${estado.familia ? `<p>${esc(estado.familia)}</p>` : ''}
+      ${eu.papel === 'master' ? '<p>Você é master: vê e edita todos os perfis da família. <a href="#/familia">Família e acessos</a></p>' : ''}
       ${eu.papel === 'submaster' ? '<p>Você é sub-master: cuida dos perfis das pessoas sob sua responsabilidade. <a href="#/familia">Família e convites</a></p>' : ''}
+      ${eu.admin_sistema ? '<p><a href="#/admin">Administração do sistema</a></p>' : ''}
     </div>
 
     ${resumo ? `
@@ -601,7 +609,8 @@ function telaConta() {
       </div>
       <dl>
         <dt>E-mail</dt><dd>${esc(eu.email)}</dd>
-        <dt>Tipo de acesso</dt><dd>${papel}</dd>
+        ${estado.familia ? `<dt>Família</dt><dd>${esc(estado.familia)}</dd>` : ''}
+        <dt>Tipo de acesso</dt><dd>${papel}${eu.admin_sistema ? ' · administrador do sistema' : ''}</dd>
         <dt>Termo de consentimento</dt>
         <dd>Aceito em ${new Date(estado.termoAceitoEm).toLocaleDateString('pt-BR')}.
           <a href="#/termo">Ler o termo</a></dd>
