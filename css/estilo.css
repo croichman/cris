@@ -559,6 +559,7 @@ input[type=file] { padding: 10px; font-size: 0.95rem; }
 .dose-alerta { color: var(--alerta); font-weight: 700; font-size: 0.95rem; }
 .dose-acoes { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; }
 .dose-acoes .botao { min-height: 48px; }
+.dose-acoes .outro-horario { grid-column: 1 / -1; min-height: 40px; font-weight: 400; text-decoration: underline; }
 .dose-feita { color: var(--eucalipto-escuro); font-weight: 700; margin-top: 6px; }
 .dose-tomado, .dose-pulado { opacity: 0.85; }
 .dose-pulado .dose-feita { color: var(--tinta-suave); }
@@ -705,3 +706,19 @@ h2.ou { font-size: 1rem; color: var(--tinta-suave); margin: 8px 0 16px; }
 }
 .lista-med a.link-foto { display: inline-flex; flex-direction: row; padding: 0; color: var(--eucalipto); }
 .lista-med a.contato { display: inline-flex; flex-direction: row; padding: 0 14px; color: var(--eucalipto); }
+
+/* ---------- Janela (escolher horário) ---------- */
+dialog.janela {
+  width: min(92vw, var(--largura));
+  border: 0;
+  border-radius: var(--raio);
+  padding: 20px;
+  background: var(--superficie);
+  color: var(--tinta);
+}
+dialog.janela::backdrop { background: rgba(0, 0, 0, 0.45); }
+dialog.janela h2 { margin: 0 0 6px; }
+dialog.janela .botoes { margin-top: 12px; }
+
+/* ---------- Versão do app ---------- */
+.versao { text-align: center; font-size: 0.8rem; color: var(--tinta-suave); padding: 8px 16px 24px; }

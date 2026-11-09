@@ -6,6 +6,7 @@ import {
 import {
   blocoMedicamentos, telaListaMedicamentos, telaMedicamento, telaFormMedicamento, telaHoje, resumoDoDia
 } from './medicamentos.js';
+import { VERSAO_APP } from './config.js';
 import { telaTermo, telaVerTermo, carregarAceite } from './termo.js';
 import { telaFamilia, blocoCompartilhamento, ligarCompartilhamento } from './familia.js';
 import { blocoItens, telaFormItem, blocoMedicos, telaFormMedico } from './saude.js';
@@ -604,6 +605,7 @@ function telaConta() {
         <dt>Termo de consentimento</dt>
         <dd>Aceito em ${new Date(estado.termoAceitoEm).toLocaleDateString('pt-BR')}.
           <a href="#/termo">Ler o termo</a></dd>
+        <dt>Versão do app</dt><dd>CRIS ${esc(VERSAO_APP)}</dd>
       </dl>
       <div class="botoes"><button class="botao principal" type="submit">Salvar nome</button></div>
     </form>

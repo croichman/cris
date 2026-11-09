@@ -165,6 +165,49 @@ export function dataHoraCurta(data, fuso = FUSO_PADRAO) {
   return `${rotulo}, ${horaLocal(d, fuso)}`;
 }
 
+// Valor para <input type="datetime-local"> no fuso do perfil ("AAAA-MM-DDTHH:MM")
+export function campoDataHora(data, fuso = FUSO_PADRAO) {
+  const d = new Date(data);
+  return `${hojeNoFuso(fuso, d)}T${horaLocal(d, fuso)}`;
+}
+
+// Janela para escolher quando a dose foi tomada. Devolve um Date, ou null se cancelar.
+export function pedirHorario({ titulo = 'Quando foi tomado?', texto = '', padrao = new Date(), fuso = FUSO_PADRAO } = {}) {
+  return new Promise((resolve) => {
+    const dlg = document.createElement('dialog');
+    dlg.className = 'janela';
+    dlg.innerHTML = `
+      <form novalidate>
+        <h2>${esc(titulo)}</h2>
+        ${texto ? `<p class="acesso">${esc(texto)}</p>` : ''}
+        <div class="campo">
+          <label for="quando-tomou">Data e hora em que tomou</label>
+          <input id="quando-tomou" name="quando" type="datetime-local" required
+            value="${campoDataHora(padrao, fuso)}" max="${campoDataHora(new Date(), fuso)}">
+        </div>
+        <div class="botoes">
+          <button class="botao principal" type="submit">Registrar</button>
+          <button class="botao secundario" type="button" data-cancelar>Cancelar</button>
+        </div>
+      </form>`;
+    document.body.appendChild(dlg);
+    let resposta = null;
+    const form = dlg.querySelector('form');
+    dlg.addEventListener('close', () => { dlg.remove(); resolve(resposta); });
+    dlg.querySelector('[data-cancelar]').onclick = () => dlg.close();
+    form.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const [ymd, hm] = (form.quando.value || '').split('T');
+      if (!ymd || !hm) return mostrarErro(form, 'Informe a data e a hora.');
+      const quando = instante(fuso, ymd, hm.slice(0, 5));
+      if (quando.getTime() > Date.now() + 60000) return mostrarErro(form, 'O horário não pode estar no futuro.');
+      resposta = quando;
+      dlg.close();
+    });
+    dlg.showModal();
+  });
+}
+
 export const DIAS_CURTOS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 export const DIAS_LONGOS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 

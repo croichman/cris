@@ -22,7 +22,12 @@
   <main id="app" aria-live="polite">
     <div class="carregando">Carregando…</div>
   </main>
+  <footer class="versao">CRIS · versão <span id="versao-app"></span></footer>
   <div id="aviso" role="status" aria-live="polite"></div>
+  <script type="module">
+    import { VERSAO_APP } from './js/config.js';
+    document.getElementById('versao-app').textContent = VERSAO_APP;
+  </script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

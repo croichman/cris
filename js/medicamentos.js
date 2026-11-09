@@ -2,7 +2,7 @@
 import {
   sb, app, estado, esc, aviso, dataBR, corDoPerfil, primeiroNome, mensagemErro, ocupado, mostrarErro,
   acessoAoPerfil, perfilComAcesso, podeEditarNivel, ehDuplicado,
-  FUSO_PADRAO, hojeNoFuso, instante, diaDaSemana, hhmm, horaLocal, dataHoraCurta,
+  FUSO_PADRAO, hojeNoFuso, instante, diaDaSemana, hhmm, horaLocal, dataHoraCurta, pedirHorario,
   DIAS_CURTOS, DIAS_LONGOS, descreverDias, nomesUsuarios,
   enviarFoto, apagarFotos, linksDasFotos
 } from './base.js';
@@ -12,6 +12,12 @@ const SITUACAO = { em_uso: 'Em uso', suspenso: 'Suspenso', concluido: 'Concluíd
 const FORMAS = ['Comprimido', 'Cápsula', 'Drágea', 'Gotas', 'Xarope', 'Solução oral', 'Suspensão', 'Sachê',
   'Injeção', 'Pomada', 'Creme', 'Gel', 'Spray', 'Adesivo', 'Inalador', 'Colírio', 'Supositório'];
 const VIAS = ['Oral', 'Sublingual', 'Tópica', 'Injetável', 'Inalatória', 'Oftálmica', 'Nasal', 'Retal', 'Vaginal', 'Transdérmica'];
+
+// Quando a dose foi de fato tomada (registros antigos só têm registrado_em)
+const quandoDose = (d) => d.tomado_em || d.registrado_em;
+// A anotação foi feita mais de 5 minutos depois de tomar?
+const anotadoDepois = (d) => d.tomado_em &&
+  new Date(d.registrado_em) - new Date(d.tomado_em) > 5 * 60000;
 
 const nomeCompleto = (m) => [m.nome_comercial, m.concentracao].filter(Boolean).join(' ');
 
@@ -116,7 +122,7 @@ export async function telaMedicamento(id) {
   const fuso = r.p.fuso_horario || FUSO_PADRAO;
 
   const [{ data: doses }, nomes, links] = await Promise.all([
-    sb.from('doses').select('id, horario_id, previsto_para, registrado_em, status, registrado_por')
+    sb.from('doses').select('id, horario_id, previsto_para, registrado_em, tomado_em, status, registrado_por')
       .eq('medicamento_id', id).order('registrado_em', { ascending: false }).limit(15),
     nomesUsuarios(),
     linksDasFotos([m.foto_caixa_path, m.foto_receita_path])
@@ -145,6 +151,7 @@ export async function telaMedicamento(id) {
     ${m.situacao === 'em_uso' ? `
       <div class="botoes" style="margin:0 0 20px">
         <button class="botao principal" id="tomei-agora">Tomei agora</button>
+        <button class="botao secundario" id="tomei-antes">Tomei em outro horário</button>
       </div>` : ''}
 
     <section class="bloco">
@@ -178,8 +185,9 @@ export async function telaMedicamento(id) {
       ${doses?.length ? `<ul class="historico-doses">
         ${doses.map((d) => `
           <li>
-            <span><strong>${d.status === 'tomado' ? 'Tomado' : 'Pulado'}</strong>, ${esc(dataHoraCurta(d.registrado_em, fuso))}
-              ${d.previsto_para ? `<br><span class="med-quando">Dose das ${horaLocal(d.previsto_para, fuso)}</span>` : ''}</span>
+            <span><strong>${d.status === 'tomado' ? 'Tomado' : 'Pulado'}</strong>, ${esc(dataHoraCurta(quandoDose(d), fuso))}
+              ${d.previsto_para ? `<br><span class="med-quando">Dose das ${horaLocal(d.previsto_para, fuso)}</span>` : ''}
+              ${anotadoDepois(d) ? `<br><span class="med-quando">Anotado ${esc(dataHoraCurta(d.registrado_em, fuso))}</span>` : ''}</span>
             <span class="med-quando">${esc(primeiroNome(nomes[d.registrado_por]) || '')}</span>
           </li>`).join('')}
       </ul>` : '<p class="acesso">Nenhuma dose registrada ainda.</p>'}
@@ -210,14 +218,22 @@ export async function telaMedicamento(id) {
       <div class="botoes"><button class="botao perigo" id="excluir-med">Excluir medicamento</button></div>` : ''}
   `;
 
-  const tomei = document.getElementById('tomei-agora');
-  if (tomei) tomei.onclick = async () => {
-    ocupado(tomei, true, 'Registrando…');
-    const { error: e } = await sb.from('doses').insert({ medicamento_id: m.id, status: 'tomado', registrado_por: estado.eu.id });
-    ocupado(tomei, false);
+  const registrarAvulsa = async (botao, tomadoEm) => {
+    ocupado(botao, true, 'Registrando…');
+    const linha = { medicamento_id: m.id, status: 'tomado', registrado_por: estado.eu.id };
+    if (tomadoEm) linha.tomado_em = tomadoEm.toISOString();
+    const { error: e } = await sb.from('doses').insert(linha);
+    ocupado(botao, false);
     if (e) return aviso(mensagemErro(e));
     aviso('Dose registrada');
     telaMedicamento(id);
+  };
+  const tomei = document.getElementById('tomei-agora');
+  if (tomei) tomei.onclick = () => registrarAvulsa(tomei);
+  const tomeiAntes = document.getElementById('tomei-antes');
+  if (tomeiAntes) tomeiAntes.onclick = async () => {
+    const quando = await pedirHorario({ titulo: nomeCompleto(m), fuso });
+    if (quando) registrarAvulsa(tomeiAntes, quando);
   };
 
   const formEnc = document.getElementById('form-encerrar');
@@ -521,7 +537,7 @@ export async function calcularDosesHoje(perfis) {
       .select('id, perfil_id, nome_comercial, concentracao, dose, data_inicio, data_fim, horarios(id, hora, dias_semana, ativo)')
       .eq('situacao', 'em_uso').eq('se_necessario', false)
       .in('perfil_id', perfis.map((p) => p.id)),
-    sb.from('doses').select('id, horario_id, previsto_para, registrado_em, status, registrado_por')
+    sb.from('doses').select('id, horario_id, previsto_para, registrado_em, tomado_em, status, registrado_por')
       .not('horario_id', 'is', null)
       .gte('previsto_para', new Date(Date.now() - 40 * 3600000).toISOString())
   ]);
@@ -609,13 +625,14 @@ export async function telaHoje() {
           ${i.med.dose ? `<span class="dose-detalhe">${esc(i.med.dose)}</span>` : ''}
           ${variosPerfis ? `<span class="dose-perfil"><span class="ponto" aria-hidden="true"></span>${esc(i.perfil.nome)}</span>` : ''}
           ${i.dose ? `
-            <span class="dose-feita">${i.dose.status === 'tomado' ? 'Tomado' : 'Pulado'} às ${horaLocal(i.dose.registrado_em, i.fuso)}${quem ? ` por ${esc(quem)}` : ''}</span>
+            <span class="dose-feita">${i.dose.status === 'tomado' ? 'Tomado' : 'Pulado'} às ${horaLocal(quandoDose(i.dose), i.fuso)}${quem ? ` por ${esc(quem)}` : ''}</span>
             ${podeDesfazer ? `<button class="botao discreto desfazer" data-n="${n}">Desfazer</button>` : ''}
           ` : `
             ${i.estado === 'atrasada' ? '<span class="dose-alerta">Atrasada</span>' : ''}
             <div class="dose-acoes">
               <button class="botao principal tomar" data-n="${n}">Tomei</button>
               <button class="botao discreto pular" data-n="${n}">Pular</button>
+              <button class="botao discreto outro-horario" data-n="${n}">Tomei em outro horário</button>
             </div>`}
         </div>
       </li>`;
@@ -661,19 +678,30 @@ export async function telaHoje() {
     telaHoje();
   };
 
-  const registrar = async (botao, status) => {
+  const registrar = async (botao, status, tomadoEm) => {
     const i = visiveis[+botao.dataset.n];
     botao.closest('.dose').querySelectorAll('button').forEach((x) => x.disabled = true);
-    const { error } = await sb.from('doses').insert({
+    const linha = {
       medicamento_id: i.med.id, horario_id: i.horario.id, previsto_para: i.previsto.toISOString(),
       status, registrado_por: estado.eu.id
-    });
+    };
+    if (tomadoEm) linha.tomado_em = tomadoEm.toISOString();
+    const { error } = await sb.from('doses').insert(linha);
     if (error) aviso(ehDuplicado(error) ? 'Outra pessoa já registrou esta dose' : mensagemErro(error));
     else aviso(status === 'tomado' ? 'Dose registrada' : 'Dose marcada como pulada');
     telaHoje();
   };
   app.querySelectorAll('.tomar').forEach((b) => b.onclick = () => registrar(b, 'tomado'));
   app.querySelectorAll('.pular').forEach((b) => b.onclick = () => registrar(b, 'pulado'));
+  app.querySelectorAll('.outro-horario').forEach((b) => b.onclick = async () => {
+    const i = visiveis[+b.dataset.n];
+    // Sugere o horário previsto, se já passou; senão, agora
+    const padrao = i.previsto.getTime() < Date.now() ? i.previsto : new Date();
+    const quando = await pedirHorario({
+      titulo: nomeCompleto(i.med), texto: `Dose das ${hhmm(i.horario.hora)} · ${i.perfil.nome}`, padrao, fuso: i.fuso
+    });
+    if (quando) registrar(b, 'tomado', quando);
+  });
   app.querySelectorAll('.desfazer').forEach((b) => b.onclick = async () => {
     const i = visiveis[+b.dataset.n];
     b.disabled = true;
