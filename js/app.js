@@ -11,6 +11,7 @@ import { telaTermo, telaVerTermo, carregarAceite } from './termo.js';
 import { telaFamilia, blocoCompartilhamento, ligarCompartilhamento } from './familia.js';
 import { blocoItens, telaFormItem, blocoMedicos, telaFormMedico } from './saude.js';
 import { telaAdmin } from './admin.js';
+import { telaQuadro } from './quadro.js';
 import { telaFicha, atualizarFichas, htmlFichasOffline, fichasSalvas, apagarFichasSalvas } from './emergencia.js';
 
 // ======================================================================
@@ -26,6 +27,7 @@ const rotas = [
   [/^#\/termo$/, telaVerTermo],
   [/^#\/familia$/, telaFamilia],
   [/^#\/admin$/, telaAdmin],
+  [/^#\/perfil\/([0-9a-f-]{36})\/quadro$/, (m) => telaQuadro(m[1])],
   [/^#\/ficha\/([0-9a-f-]{36})$/, (m) => telaFicha(m[1])],
   [/^#\/perfil\/([0-9a-f-]{36})\/(alergia|condicao|vacina)\/novo$/, (m) => telaFormItem(m[2], m[1], null)],
   [/^#\/(alergia|condicao|vacina)\/([0-9a-f-]{36})$/, (m) => telaFormItem(m[1], null, m[2])],

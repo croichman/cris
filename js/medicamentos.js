@@ -57,6 +57,7 @@ export async function blocoMedicamentos(perfilId, podeEditar) {
         </ul>` : `<p class="acesso">Nenhum medicamento em uso registrado.</p>`}
       <div class="acoes-bloco">
         ${podeEditar ? `<a class="botao secundario" href="#/perfil/${perfilId}/medicamento/novo">Adicionar medicamento</a>` : ''}
+        ${emUso.length ? `<a class="botao secundario" href="#/perfil/${perfilId}/quadro">Quadro semanal (PDF)</a>` : ''}
         ${encerrados ? `<a class="link-discreto" href="#/perfil/${perfilId}/medicamentos">Ver histórico (${encerrados} ${encerrados === 1 ? 'encerrado' : 'encerrados'})</a>` : ''}
       </div>
     </section>`;
