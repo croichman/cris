@@ -12,6 +12,7 @@ import { telaFamilia, blocoCompartilhamento, ligarCompartilhamento } from './fam
 import { blocoItens, telaFormItem, blocoMedicos, telaFormMedico } from './saude.js';
 import { telaAdmin } from './admin.js';
 import { telaQuadro } from './quadro.js';
+import { telaNotificacoes } from './notificacoes.js';
 import { telaFicha, atualizarFichas, htmlFichasOffline, fichasSalvas, apagarFichasSalvas } from './emergencia.js';
 
 // ======================================================================
@@ -27,6 +28,7 @@ const rotas = [
   [/^#\/termo$/, telaVerTermo],
   [/^#\/familia$/, telaFamilia],
   [/^#\/admin$/, telaAdmin],
+  [/^#\/notificacoes$/, telaNotificacoes],
   [/^#\/perfil\/([0-9a-f-]{36})\/quadro$/, (m) => telaQuadro(m[1])],
   [/^#\/ficha\/([0-9a-f-]{36})$/, (m) => telaFicha(m[1])],
   [/^#\/perfil\/([0-9a-f-]{36})\/(alergia|condicao|vacina)\/novo$/, (m) => telaFormItem(m[2], m[1], null)],
@@ -620,6 +622,12 @@ function telaConta() {
       </dl>
       <div class="botoes"><button class="botao principal" type="submit">Salvar nome</button></div>
     </form>
+
+    <a class="botao-ficha" href="#/notificacoes">
+      <span><strong>Notificações</strong><br>
+      <span class="detalhe">Lembretes de remédio no celular, na hora de cada dose.</span></span>
+      <span class="seta" aria-hidden="true">›</span>
+    </a>
 
     <div class="botoes"><button class="botao secundario" id="sair">Sair do CRIS</button></div>`;
 

@@ -30,7 +30,7 @@ function resumoHorarios(m) {
   return hs.map((h) => `${hhmm(h.hora)} (${descreverDias(h.dias_semana)})`).join('; ');
 }
 
-const SEL_MED = 'id, perfil_id, profissional_id, profissionais(id, nome, especialidade), nome_comercial, principio_ativo, concentracao, forma, dose, via, posologia, motivo, data_inicio, data_fim, situacao, motivo_suspensao, uso_continuo, se_necessario, observacoes, foto_caixa_path, foto_receita_path, horarios(id, hora, dias_semana, ativo)';
+const SEL_MED = 'id, perfil_id, profissional_id, profissionais(id, nome, especialidade), nome_comercial, principio_ativo, concentracao, forma, dose, via, posologia, motivo, data_inicio, data_fim, situacao, motivo_suspensao, uso_continuo, se_necessario, lembretes_ativos, observacoes, foto_caixa_path, foto_receita_path, horarios(id, hora, dias_semana, ativo)';
 
 // ======================================================================
 // Bloco de medicamentos na página do perfil
@@ -284,7 +284,7 @@ export async function telaMedicamento(id) {
 // ======================================================================
 export async function telaFormMedicamento(perfilId, id) {
   app.innerHTML = `<div class="carregando">Carregando…</div>`;
-  let m = { horarios: [], uso_continuo: false, se_necessario: false };
+  let m = { horarios: [], uso_continuo: false, se_necessario: false, lembretes_ativos: true };
   if (id) {
     const { data, error } = await sb.from('medicamentos').select(SEL_MED).eq('id', id).maybeSingle();
     if (error || !data) return erroTela(error ? mensagemErro(error) : 'Medicamento não encontrado.', '#/');
@@ -366,6 +366,11 @@ export async function telaFormMedicamento(perfilId, id) {
         <div id="area-horarios" ${m.se_necessario ? 'hidden' : ''}>
           <div id="horarios"></div>
           <button class="botao secundario" type="button" id="add-horario">Adicionar horário</button>
+          <label class="marcar" style="margin-top:14px">
+            <input type="checkbox" name="lembretes_ativos" ${m.lembretes_ativos !== false ? 'checked' : ''}>
+            <span><strong>Enviar lembretes</strong><br>
+            <span class="ajuda" style="display:inline">Avisa no celular de quem ativou as notificações para esta pessoa.</span></span>
+          </label>
         </div>
         <div class="campo" style="margin-top:18px">
           <label for="posologia">Posologia, como está na receita</label>
@@ -481,6 +486,7 @@ export async function telaFormMedicamento(perfilId, id) {
         data_fim: txt('data_fim'),
         uso_continuo: !!f.get('uso_continuo'),
         se_necessario: sos,
+        lembretes_ativos: !!f.get('lembretes_ativos'),
         observacoes: txt('observacoes'),
         ...fotos
       };
@@ -649,6 +655,7 @@ export async function telaHoje() {
     <header class="topo"><a class="voltar" href="#/">‹ Perfis</a></header>
     <h1>Doses de hoje</h1>
     <p class="acesso" style="margin-top:4px">${esc(hoje.charAt(0).toUpperCase() + hoje.slice(1))}</p>
+    <p style="margin-top:-4px"><a class="link-discreto" href="#/notificacoes">Receber lembretes no celular</a></p>
 
     ${variosPerfis ? `
       <div class="campo">

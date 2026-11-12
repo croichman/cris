@@ -764,3 +764,9 @@ dialog.janela .botoes { margin-top: 12px; }
   .q-secao h2 { break-after: avoid; }
   .q-lista li { break-inside: avoid; }
 }
+
+/* ---------- Notificações ---------- */
+.passos { margin: 0 0 8px; padding-left: 22px; }
+.passos li { margin-bottom: 6px; }
+.estado-ok { font-weight: 700; color: var(--eucalipto-escuro, var(--eucalipto)); }
+.estado-ok::before { content: "✓ "; }
