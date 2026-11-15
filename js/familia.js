@@ -136,6 +136,8 @@ export async function telaFamilia() {
                 <input type="checkbox" class="delegar" data-sub="${u.id}" data-usuario="${o.id}" ${sob.includes(o.id) ? 'checked' : ''}>
                 ${esc(nomeOuEmail(o))}
               </label>`).join('') || '<p class="acesso">Não há outros membros.</p>'}
+            <p class="acesso" style="margin-top:8px">Masters não aparecem aqui. Para dar acesso ao perfil de um master,
+              use "Quem tem acesso → Compartilhar" na página desse perfil.</p>
           </fieldset>` : ''}
         ${!souEu ? `<button class="botao discreto remover-acesso" data-id="${u.id}" data-nome="${esc(nomeOuEmail(u))}">Remover acesso</button>` : ''}
       </li>`;
