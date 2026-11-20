@@ -1,6 +1,6 @@
 // Service worker do CRIS: guarda os arquivos do app para abrir rápido e sem internet.
 // Ao publicar uma nova versão, aumente o número abaixo.
-const VERSAO = 'cris-v12';
+const VERSAO = 'cris-v13';
 const ARQUIVOS = [
   './',
   'index.html',
@@ -14,6 +14,7 @@ const ARQUIVOS = [
   'js/admin.js',
   'js/quadro.js',
   'js/notificacoes.js',
+  'js/contatos.js',
   'js/saude.js',
   'js/emergencia.js',
   'js/vendor/supabase.js',

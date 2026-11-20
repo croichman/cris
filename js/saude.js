@@ -1,4 +1,5 @@
 // CRIS — alergias, condições de saúde, vacinas e médicos
+import { temSeletorDeContatos, escolherContato, lerVcard, preencherFormulario } from './contatos.js';
 import {
   sb, app, estado, esc, aviso, dataBR, primeiroNome, mensagemErro, ocupado, mostrarErro,
   perfilComAcesso, hojeNoFuso, enviarFoto, apagarFotos, linksDasFotos
@@ -309,6 +310,15 @@ export async function telaFormMedico(perfilId, id) {
       <h2 class="ou">Ou cadastre um novo</h2>` : ''}
 
     <form id="form-medico" novalidate>
+      <div class="importar-contato">
+        ${temSeletorDeContatos() ? `
+          <button class="botao secundario" type="button" id="do-celular">Preencher com um contato do celular</button>` : ''}
+        <label class="botao ${temSeletorDeContatos() ? 'discreto' : 'secundario'}" for="arquivo-vcf">Importar cartão de contato (.vcf)</label>
+        <input id="arquivo-vcf" type="file" accept=".vcf,text/vcard,text/x-vcard" hidden>
+        ${!temSeletorDeContatos() ? `
+          <p class="ajuda">No iPhone: abra o contato no app <strong>Contatos</strong>, toque em
+            <strong>Compartilhar Contato</strong> → <strong>Salvar em Arquivos</strong>. Depois toque no botão acima e escolha o arquivo.</p>` : ''}
+      </div>
       ${CAMPOS_MEDICO.map((c) => campoHTML(c, m[c.nome], {})).join('')}
       <datalist id="lista-especialidades">${ESPECIALIDADES.map((e) => `<option value="${e}">`).join('')}</datalist>
       <div class="botoes">
@@ -333,6 +343,28 @@ export async function telaFormMedico(perfilId, id) {
   });
 
   const form = document.getElementById('form-medico');
+
+  const aplicarContato = (dados) => {
+    if (!dados) return;
+    const n = preencherFormulario(form, dados);
+    aviso(n ? 'Dados do contato preenchidos. Confira e salve.' : 'O contato não tinha dados para preencher.');
+  };
+  const bCelular = document.getElementById('do-celular');
+  if (bCelular) bCelular.onclick = async () => {
+    try { aplicarContato(await escolherContato()); }
+    catch (e) { if (e?.name !== 'AbortError') aviso('Não foi possível abrir os contatos do celular.'); }
+  };
+  const arqVcf = document.getElementById('arquivo-vcf');
+  arqVcf.onchange = async () => {
+    const arq = arqVcf.files[0];
+    arqVcf.value = '';
+    if (!arq) return;
+    if (arq.size > 2 * 1024 * 1024) return aviso('Arquivo grande demais para um cartão de contato.');
+    const dados = lerVcard(await arq.text());
+    if (!dados) return aviso('Esse arquivo não parece um cartão de contato (.vcf).');
+    aplicarContato(dados);
+  };
+
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const f = new FormData(form);

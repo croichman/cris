@@ -1,7 +1,7 @@
 # CRIS — Documentação técnica
 
 Central de Registros e Informações de Saúde. Este documento descreve a arquitetura, o modelo de dados,
-as regras de segurança e a operação do sistema. Versão do app no momento da escrita: **0.11 Beta**.
+as regras de segurança e a operação do sistema. Versão do app no momento da escrita: **0.12 Beta**.
 
 ---
 
@@ -35,6 +35,7 @@ as regras de segurança e a operação do sistema. Versão do app no momento da 
 | `app.js` | Rotas (hash), login, tela inicial, perfil, formulário de perfil, Minha conta |
 | `medicamentos.js` | Medicamentos, horários, registro de doses, tela "Doses de hoje", `perfisAcompanhados` |
 | `saude.js` | Alergias, condições, vacinas e médicos |
+| `contatos.js` | Preencher médico a partir da agenda (Contact Picker API no Android) ou de cartão `.vcf` (iPhone/computador); nada sai do aparelho |
 | `emergencia.js` | Ficha de emergência e cópia offline no `localStorage` |
 | `quadro.js` | Quadro semanal (dias × horários) para impressão/PDF |
 | `notificacoes.js` | Ativar Web Push no aparelho, escolher perfis acompanhados |
