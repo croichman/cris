@@ -4,7 +4,7 @@ import {
   ocupado, mostrarErro, acessoAoPerfil
 } from './base.js';
 import {
-  blocoMedicamentos, telaListaMedicamentos, telaMedicamento, telaFormMedicamento, telaHoje, resumoDoDia
+  blocoMedicamentos, telaListaMedicamentos, telaMedicamento, telaFormMedicamento, telaHoje, resumoDoDia, perfisAcompanhados
 } from './medicamentos.js';
 import { VERSAO_APP } from './config.js';
 import { telaTermo, telaVerTermo, carregarAceite } from './termo.js';
@@ -106,8 +106,10 @@ function telaEntrar() {
   app.innerHTML = `
     <section class="entrada">
       <p class="marca-grande">CRIS</p>
+      <p class="acronimo">Central de Registros e Informações de Saúde</p>
       <div class="tarja-entrada" aria-hidden="true"></div>
       <p class="subtitulo">Remédios, médicos e vacinas da família, num só lugar.</p>
+      <p><a class="link-discreto" href="ajuda.html">Como funciona o CRIS?</a></p>
 
       ${pedindoCodigo ? `
         <form id="form-codigo" novalidate>
@@ -260,7 +262,9 @@ async function telaInicio() {
   // O perfil da própria pessoa vem primeiro
   meus.sort((a, b) => (b.usuario_vinculado_id === eu.id) - (a.usuario_vinculado_id === eu.id));
 
-  const resumo = await resumoDoDia(perfis);
+  // O resumo de doses considera só quem a pessoa acompanha (ela escolhe em Notificações)
+  const { lista: acompanhando } = await perfisAcompanhados(perfis);
+  const resumo = await resumoDoDia(acompanhando);
 
   // Mantém as fichas de emergência de quem a pessoa acompanha salvas no aparelho (no máximo a cada 6 horas)
   const acompanhados = [...meus, ...cuidados, ...compartilhados];
@@ -618,14 +622,20 @@ function telaConta() {
         <dt>Termo de consentimento</dt>
         <dd>Aceito em ${new Date(estado.termoAceitoEm).toLocaleDateString('pt-BR')}.
           <a href="#/termo">Ler o termo</a></dd>
-        <dt>Versão do app</dt><dd>CRIS ${esc(VERSAO_APP)}</dd>
+        <dt>Versão do app</dt><dd>CRIS ${esc(VERSAO_APP)}<br><span class="acesso">Central de Registros e Informações de Saúde</span></dd>
       </dl>
       <div class="botoes"><button class="botao principal" type="submit">Salvar nome</button></div>
     </form>
 
+    <a class="botao-ficha" href="ajuda.html">
+      <span><strong>Como usar o CRIS</strong><br>
+      <span class="detalhe">Guia passo a passo, que também pode ser impresso.</span></span>
+      <span class="seta" aria-hidden="true">›</span>
+    </a>
+
     <a class="botao-ficha" href="#/notificacoes">
-      <span><strong>Notificações</strong><br>
-      <span class="detalhe">Lembretes de remédio no celular, na hora de cada dose.</span></span>
+      <span><strong>Doses e lembretes</strong><br>
+      <span class="detalhe">De quem você acompanha as doses e avisos no celular na hora de cada uma.</span></span>
       <span class="seta" aria-hidden="true">›</span>
     </a>
 

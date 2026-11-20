@@ -770,3 +770,7 @@ dialog.janela .botoes { margin-top: 12px; }
 .passos li { margin-bottom: 6px; }
 .estado-ok { font-weight: 700; color: var(--eucalipto-escuro, var(--eucalipto)); }
 .estado-ok::before { content: "✓ "; }
+
+/* ---------- Acrônimo e "quem eu acompanho" ---------- */
+.acronimo { margin: -6px 0 12px; font-size: 0.95rem; letter-spacing: 0.02em; color: var(--tinta-suave); }
+.acompanho { margin: 0 0 12px; color: var(--tinta-suave); }

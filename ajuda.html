@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Como usar o CRIS · Central de Registros e Informações de Saúde</title>
+  <meta name="theme-color" content="#2F6F62">
+  <link rel="icon" href="icons/icone-192.png">
+  <link rel="stylesheet" href="css/estilo.css">
+  <style>
+    .ajuda-pagina { max-width: 720px; margin: 0 auto; padding: 24px 18px 64px; font-size: 1.15rem; line-height: 1.6; }
+    .ajuda-pagina h1 { font-size: 2rem; margin: 0 0 4px; }
+    .ajuda-pagina h2 { font-size: 1.45rem; margin: 40px 0 10px; padding-top: 12px; border-top: 2px solid var(--linha); }
+    .ajuda-pagina h3 { font-size: 1.15rem; margin: 20px 0 6px; }
+    .ajuda-pagina ol, .ajuda-pagina ul { padding-left: 26px; }
+    .ajuda-pagina li { margin-bottom: 8px; }
+    .ajuda-pagina .botao-nome { display: inline-block; padding: 1px 10px; border-radius: 8px; background: var(--menta); font-weight: 700; white-space: nowrap; }
+    .ajuda-pagina .dica { background: var(--superficie); border-left: 6px solid var(--eucalipto); border-radius: 8px; padding: 12px 16px; margin: 14px 0; }
+    .ajuda-pagina .atencao { border-left-color: #C0573E; }
+    .ajuda-pagina .indice { columns: 2; column-gap: 32px; padding-left: 22px; }
+    @media (max-width: 560px) { .ajuda-pagina .indice { columns: 1; } }
+    .ajuda-pagina .topo-ajuda .voltar { white-space: nowrap; }
+    .ajuda-pagina .topo-ajuda { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .ajuda-pagina .acronimo { margin: 0 0 20px; }
+    @media print {
+      .ajuda-pagina { font-size: 11pt; max-width: none; padding: 0; }
+      .nao-imprimir { display: none !important; }
+      .ajuda-pagina h2 { break-after: avoid; }
+      .ajuda-pagina .dica { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<main class="ajuda-pagina">
+  <div class="topo-ajuda nao-imprimir">
+    <a class="voltar" href="./">‹ Abrir o CRIS</a>
+    <button class="botao secundario" onclick="window.print()">Imprimir ou salvar em PDF</button>
+  </div>
+
+  <h1>Como usar o CRIS</h1>
+  <p class="acronimo">Central de Registros e Informações de Saúde</p>
+
+  <p>O CRIS guarda, num só lugar, os <strong>remédios, horários, vacinas, alergias e médicos</strong>
+  de cada pessoa da família. Ele também avisa na hora de tomar cada remédio e ajuda quem cuida de outra pessoa.</p>
+
+  <div class="dica">Este guia usa palavras simples e passos curtos. Você pode ler só a parte de que precisa.
+  Os nomes em <span class="botao-nome">destaque</span> são os botões que aparecem no app.</div>
+
+  <h2 style="border-top:0;margin-top:24px">O que tem neste guia</h2>
+  <ol class="indice">
+    <li><a href="#instalar">Colocar o CRIS no celular</a></li>
+    <li><a href="#entrar">Entrar no app</a></li>
+    <li><a href="#perfil">Criar um perfil</a></li>
+    <li><a href="#remedio">Cadastrar um remédio</a></li>
+    <li><a href="#tomei">Marcar que tomou o remédio</a></li>
+    <li><a href="#hoje">Doses de hoje</a></li>
+    <li><a href="#lembretes">Receber lembretes no celular</a></li>
+    <li><a href="#quadro">Quadro semanal para imprimir</a></li>
+    <li><a href="#emergencia">Ficha de emergência</a></li>
+    <li><a href="#saude">Alergias, vacinas e médicos</a></li>
+    <li><a href="#familia">Família e compartilhamento</a></li>
+    <li><a href="#duvidas">Dúvidas comuns</a></li>
+  </ol>
+
+  <h2 id="instalar">1. Colocar o CRIS no celular</h2>
+  <p>O CRIS não fica na loja de aplicativos. Ele é instalado a partir do navegador, e depois fica com um ícone
+  na tela do celular, como qualquer outro app.</p>
+
+  <h3>No Android (Samsung, Motorola, Xiaomi e outros)</h3>
+  <ol>
+    <li>Abra o <strong>Chrome</strong> e entre em <strong>croichman.github.io/cris</strong>.</li>
+    <li>Toque nos <strong>três pontinhos</strong> no canto de cima, à direita.</li>
+    <li>Toque em <strong>Instalar app</strong> ou <strong>Adicionar à tela inicial</strong>.</li>
+    <li>Confirme. O ícone do CRIS aparece na tela do celular.</li>
+  </ol>
+
+  <h3>No iPhone</h3>
+  <ol>
+    <li>Abra o <strong>Safari</strong> (a bússola azul) e entre em <strong>croichman.github.io/cris</strong>.</li>
+    <li>Toque no botão <strong>Compartilhar</strong>: o quadrado com uma seta para cima, na parte de baixo da tela.</li>
+    <li>Role e toque em <strong>Adicionar à Tela de Início</strong>.</li>
+    <li>Toque em <strong>Adicionar</strong>. O ícone do CRIS aparece na tela do iPhone.</li>
+  </ol>
+  <div class="dica">Depois de instalar, abra o CRIS sempre <strong>pelo ícone</strong>. No iPhone, isso é
+  obrigatório para receber os lembretes.</div>
+
+  <h2 id="entrar">2. Entrar no app</h2>
+  <p>O CRIS não usa senha. Para entrar, você recebe um <strong>código</strong> no seu e-mail.</p>
+  <ol>
+    <li>Digite o seu e-mail e toque em <span class="botao-nome">Enviar código</span>.</li>
+    <li>Abra o seu e-mail. Chega uma mensagem do <strong>CRIS-App</strong> com um código de números.
+      Se não aparecer em um minuto, olhe também a pasta <strong>Spam</strong> ou <strong>Lixo eletrônico</strong>.</li>
+    <li>Volte ao CRIS, digite o código e toque em <span class="botao-nome">Entrar</span>.</li>
+  </ol>
+  <p>Na primeira vez, aparece o <strong>termo de consentimento</strong>. Ele explica quem pode ver os seus dados.
+  Leia e toque em aceitar para continuar.</p>
+  <div class="dica atencao"><strong>Importante:</strong> só entra no CRIS quem foi convidado. Se aparecer a
+  mensagem de que o e-mail não foi convidado, peça um convite a quem cuida do app na sua família.
+  <strong>Nunca passe o código para ninguém</strong>, nem por telefone.</div>
+
+  <h2 id="perfil">3. Criar um perfil</h2>
+  <p>Cada pessoa tem um <strong>perfil</strong>: é a "ficha" com os dados de saúde dela.
+  Você pode ter o seu e também o de quem você cuida (um filho, a mãe, o pai…).</p>
+  <ol>
+    <li>Na tela inicial, toque em <span class="botao-nome">Novo perfil</span>.</li>
+    <li>Escreva o nome completo. Se quiser, preencha nascimento, tipo sanguíneo, plano de saúde e um contato de emergência.</li>
+    <li>Se o perfil for o <strong>seu</strong>, marque <strong>Este perfil é meu</strong>.</li>
+    <li>Toque em <span class="botao-nome">Criar perfil</span>.</li>
+  </ol>
+
+  <h2 id="remedio">4. Cadastrar um remédio</h2>
+  <ol>
+    <li>Abra o perfil da pessoa e toque em <span class="botao-nome">Adicionar medicamento</span>.</li>
+    <li>Escreva o <strong>nome do remédio</strong> como está na caixa e a <strong>concentração</strong> (por exemplo, 50 mg).</li>
+    <li>Em <strong>Dose</strong>, escreva quanto tomar (por exemplo, 1 comprimido).</li>
+    <li>Em <strong>Horários</strong>, coloque cada hora em que o remédio deve ser tomado. Use
+      <span class="botao-nome">Adicionar horário</span> para colocar mais de um.</li>
+    <li>Se o remédio não é todo dia, desmarque os dias em que ele não é tomado.</li>
+    <li>Se for um remédio só para quando precisar (como um remédio para dor), marque <strong>Tomar só quando necessário</strong>: ele fica sem horário.</li>
+    <li>Se quiser, tire foto da caixa e da receita.</li>
+    <li>Toque em <strong>Salvar</strong>.</li>
+  </ol>
+  <div class="dica">Quando o médico mandar parar um remédio, abra o remédio e marque como <strong>suspenso</strong>
+  ou <strong>concluído</strong>. Assim ele sai dos horários, mas fica guardado no histórico.</div>
+
+  <h2 id="tomei">5. Marcar que tomou o remédio</h2>
+  <p>Na tela <strong>Doses de hoje</strong>, cada remédio aparece no seu horário.</p>
+  <ul>
+    <li>Tomou agora? Toque em <span class="botao-nome">Tomei</span>.</li>
+    <li>Tomou mais cedo e esqueceu de marcar? Toque em <span class="botao-nome">Tomei em outro horário</span>,
+      ajuste a hora e toque em <span class="botao-nome">Registrar</span>.</li>
+    <li>Não vai tomar essa dose? Toque em <span class="botao-nome">Pular</span>.</li>
+    <li>Marcou errado? Toque em <span class="botao-nome">Desfazer</span>.</li>
+  </ul>
+  <p>Quando alguém da família marca uma dose, todos que acompanham aquela pessoa veem que ela já foi tomada,
+  e ninguém recebe mais aviso daquela dose.</p>
+
+  <h2 id="hoje">6. Doses de hoje</h2>
+  <p>Na tela inicial, o quadro <strong>Doses de hoje</strong> mostra quantas doses estão atrasadas e quantas ainda vão chegar.
+  Ele fica <strong>vermelho</strong> quando há dose atrasada (mais de 30 minutos depois do horário).</p>
+  <p>Ele mostra só as pessoas que <strong>você acompanha</strong>. No começo, é só você.
+  Para acompanhar outras pessoas (a mãe, um filho):</p>
+  <ol>
+    <li>Toque em <span class="botao-nome">Minha conta</span> e depois em <strong>Doses e lembretes</strong>.</li>
+    <li>Em <strong>Acompanhar as doses de</strong>, marque as pessoas que você quer acompanhar.</li>
+  </ol>
+  <p>Na tela Doses de hoje, você também pode escolher <strong>Mostrar: Todos os perfis</strong> para ver tudo de uma vez.</p>
+
+  <h2 id="lembretes">7. Receber lembretes no celular</h2>
+  <p>O CRIS pode tocar um aviso no celular na hora de cada remédio, mesmo com o app fechado.</p>
+  <ol>
+    <li>Abra o CRIS pelo ícone e toque em <span class="botao-nome">Minha conta</span> → <strong>Doses e lembretes</strong>.</li>
+    <li>Toque em <span class="botao-nome">Ativar notificações neste aparelho</span>.</li>
+    <li>O celular pergunta se pode mostrar notificações: toque em <strong>Permitir</strong>.</li>
+    <li>Marque de quem você quer receber os avisos.</li>
+    <li>Para conferir, toque em <span class="botao-nome">Mostrar notificação de teste</span>.</li>
+  </ol>
+  <p>Faça isso em cada celular ou tablet em que quiser receber os avisos.</p>
+  <div class="dica"><strong>O aviso não chega?</strong>
+    <ul style="margin:6px 0 0">
+      <li>No iPhone: o CRIS precisa estar na tela de início e ser aberto pelo ícone. Confira também em
+        <strong>Ajustes → Notificações → CRIS</strong> se as notificações estão permitidas.</li>
+      <li>Confira se o celular não está no modo <strong>Não perturbe</strong>, <strong>Foco</strong> ou economia de bateria forte.</li>
+      <li>No cadastro do remédio, a opção <strong>Enviar lembretes</strong> precisa estar marcada.</li>
+    </ul>
+  </div>
+
+  <h2 id="quadro">8. Quadro semanal para imprimir</h2>
+  <p>É uma tabela com os dias da semana e os horários de cada remédio. Boa para colar na geladeira,
+  deixar com quem cuida ou levar ao médico.</p>
+  <ol>
+    <li>Abra o perfil da pessoa.</li>
+    <li>Toque em <span class="botao-nome">Quadro semanal (PDF)</span>.</li>
+    <li>Toque em <span class="botao-nome">Salvar em PDF ou imprimir</span> e escolha <strong>Salvar como PDF</strong> ou a sua impressora.</li>
+  </ol>
+
+  <h2 id="emergencia">9. Ficha de emergência</h2>
+  <p>É um resumo com alergias, doenças e remédios em uso, para mostrar rápido a um médico ou socorrista.</p>
+  <ul>
+    <li>Abra o perfil e toque em <strong>Ficha de emergência</strong>.</li>
+    <li>A ficha fica guardada no celular e abre <strong>mesmo sem internet</strong>.</li>
+  </ul>
+
+  <h2 id="saude">10. Alergias, condições, vacinas e médicos</h2>
+  <p>No perfil de cada pessoa há partes para <strong>Alergias</strong>, <strong>Condições de saúde</strong>
+  (como pressão alta ou diabetes), <strong>Vacinas</strong> e <strong>Médicos</strong>.
+  Em cada uma, toque em <strong>Adicionar</strong>, preencha e salve.</p>
+  <div class="dica atencao">Cadastre sempre as <strong>alergias a remédios</strong>. Elas aparecem em destaque na ficha de emergência.</div>
+
+  <h2 id="familia">11. Família e compartilhamento</h2>
+  <h3>Quem vê o quê</h3>
+  <ul>
+    <li><strong>Master</strong>: cuida do CRIS na família. Vê e edita todos os perfis da família e convida pessoas.</li>
+    <li><strong>Sub-master</strong>: cuida dos perfis das pessoas que ficaram sob a responsabilidade dele, e pode convidar.</li>
+    <li><strong>Membro</strong>: vê e edita o próprio perfil e os perfis que compartilharam com ele.</li>
+  </ul>
+  <p>Pessoas de <strong>outras famílias</strong> não veem nada da sua família.</p>
+
+  <h3>Dar acesso ao seu perfil para outra pessoa</h3>
+  <ol>
+    <li>Abra o perfil e vá até <strong>Quem tem acesso</strong>.</li>
+    <li>Em <strong>Compartilhar com</strong>, escolha a pessoa.</li>
+    <li>Escolha se ela pode <strong>só consultar e registrar doses</strong> ou também <strong>editar</strong>.</li>
+    <li>Toque em <span class="botao-nome">Compartilhar</span>. Para tirar o acesso, toque em <span class="botao-nome">Remover</span>.</li>
+  </ol>
+
+  <h3>Convidar alguém (masters e sub-masters)</h3>
+  <ol>
+    <li>Na tela inicial, toque em <strong>Família e acessos</strong> (para sub-masters, <strong>Família e convites</strong>).</li>
+    <li>Escreva o nome e o e-mail da pessoa e toque em <span class="botao-nome">Enviar convite</span>.</li>
+    <li>A pessoa recebe um e-mail. Depois, ela instala o CRIS e entra com o e-mail dela (veja os passos 1 e 2).</li>
+  </ol>
+
+  <h2 id="duvidas">12. Dúvidas comuns</h2>
+  <h3>O código não chegou</h3>
+  <p>Espere um minuto e olhe o Spam. Confira se o e-mail foi digitado certo. Se pedir muitos códigos seguidos,
+  o app pede para esperar um pouco antes de tentar de novo.</p>
+  <h3>Apareceu "Você não tem permissão para isso"</h3>
+  <p>Você está tentando mudar algo de um perfil que não foi compartilhado com você para edição.
+  Peça a quem cuida desse perfil (ou a um master) para liberar o acesso.</p>
+  <h3>Troquei de celular</h3>
+  <p>Instale o CRIS no celular novo e entre com o mesmo e-mail. Todos os dados continuam lá.
+  Só é preciso ativar os lembretes de novo no aparelho novo.</p>
+  <h3>O app parece desatualizado</h3>
+  <p>Feche o CRIS por completo e abra de novo. A versão aparece no rodapé de todas as telas.</p>
+
+  <div class="dica" style="margin-top:32px">O CRIS ajuda a organizar, mas <strong>não substitui o médico ou o farmacêutico</strong>.
+  Dúvidas sobre remédios e doses devem ser sempre conversadas com um profissional de saúde.</div>
+</main>
+</body>
+</html>

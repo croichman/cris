@@ -585,6 +585,18 @@ async function perfisVisiveis() {
   return perfis;
 }
 
+// Perfis cujas doses a pessoa acompanha (tela "Doses de hoje", resumo da Início e lembretes).
+// É a mesma escolha da tela Notificações (tabela lembrete_destinatarios).
+// Enquanto a pessoa não escolheu nada: o próprio perfil (ou, se não tiver, os que ela cadastrou).
+export async function perfisAcompanhados(perfis) {
+  const { data } = await sb.from('lembrete_destinatarios').select('perfil_id').eq('usuario_id', estado.eu.id);
+  const escolhidos = new Set((data || []).map((x) => x.perfil_id));
+  if (escolhidos.size) return { lista: perfis.filter((p) => escolhidos.has(p.id)), escolheu: true };
+  const proprio = perfis.filter((p) => p.usuario_vinculado_id === estado.eu.id);
+  const lista = proprio.length ? proprio : perfis.filter((p) => p.dono_id === estado.eu.id);
+  return { lista, escolheu: false };
+}
+
 // Resumo para a tela inicial
 export async function resumoDoDia(perfis) {
   try {
@@ -598,25 +610,30 @@ export async function resumoDoDia(perfis) {
   }
 }
 
-let filtroHoje = 'todos';
-try { filtroHoje = localStorage.getItem('cris-filtro-hoje') || 'todos'; } catch {}
+// 'acompanho' (padrão), 'todos' ou o id de um perfil
+let filtroHoje = 'acompanho';
+try { filtroHoje = localStorage.getItem('cris-filtro-doses') || 'acompanho'; } catch {}
 
 export async function telaHoje() {
   app.innerHTML = `
     <header class="topo"><a class="voltar" href="#/">‹ Perfis</a></header>
     <div class="carregando" style="padding-top:20vh">Carregando doses…</div>`;
-  let perfis, itens, nomes;
+  let perfis, itens, nomes, acomp;
   try {
     perfis = await perfisVisiveis();
-    [itens, nomes] = await Promise.all([calcularDosesHoje(perfis), nomesUsuarios()]);
+    [itens, nomes, acomp] = await Promise.all([calcularDosesHoje(perfis), nomesUsuarios(), perfisAcompanhados(perfis)]);
   } catch (e) {
     return erroTela(mensagemErro(e), '#/');
   }
 
+  const idsAcomp = new Set(acomp.lista.map((p) => p.id));
   const comDoses = perfis.filter((p) => itens.some((i) => i.perfil.id === p.id));
-  if (filtroHoje !== 'todos' && !comDoses.some((p) => p.id === filtroHoje)) filtroHoje = 'todos';
-  const visiveis = filtroHoje === 'todos' ? itens : itens.filter((i) => i.perfil.id === filtroHoje);
-  const variosPerfis = comDoses.length > 1;
+  if (!['acompanho', 'todos'].includes(filtroHoje) && !comDoses.some((p) => p.id === filtroHoje)) filtroHoje = 'acompanho';
+  const visiveis = filtroHoje === 'todos' ? itens
+    : filtroHoje === 'acompanho' ? itens.filter((i) => idsAcomp.has(i.perfil.id))
+    : itens.filter((i) => i.perfil.id === filtroHoje);
+  const variosPerfis = new Set(visiveis.map((i) => i.perfil.id)).size > 1;
+  const nomesAcomp = acomp.lista.map((p) => primeiroNome(p.nome)).join(', ');
 
   const hoje = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: FUSO_PADRAO });
 
@@ -655,22 +672,27 @@ export async function telaHoje() {
     <header class="topo"><a class="voltar" href="#/">‹ Perfis</a></header>
     <h1>Doses de hoje</h1>
     <p class="acesso" style="margin-top:4px">${esc(hoje.charAt(0).toUpperCase() + hoje.slice(1))}</p>
-    <p style="margin-top:-4px"><a class="link-discreto" href="#/notificacoes">Receber lembretes no celular</a></p>
+    ${filtroHoje === 'acompanho' ? `
+      <p class="acompanho">Você acompanha: <strong>${esc(nomesAcomp || 'ninguém ainda')}</strong>.
+        <a class="link-discreto" href="#/notificacoes">Escolher de quem</a></p>` : ''}
 
-    ${variosPerfis ? `
+    ${comDoses.length > 1 || (comDoses.length && filtroHoje !== 'acompanho') || comDoses.some((p) => !idsAcomp.has(p.id)) ? `
       <div class="campo">
         <label for="filtro">Mostrar</label>
         <select id="filtro">
-          <option value="todos">Todos os perfis</option>
-          ${comDoses.map((p) => `<option value="${p.id}" ${filtroHoje === p.id ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}
+          <option value="acompanho" ${filtroHoje === 'acompanho' ? 'selected' : ''}>Quem eu acompanho</option>
+          <option value="todos" ${filtroHoje === 'todos' ? 'selected' : ''}>Todos os perfis</option>
+          ${comDoses.map((p) => `<option value="${p.id}" ${filtroHoje === p.id ? 'selected' : ''}>Só ${esc(p.nome)}</option>`).join('')}
         </select>
       </div>` : ''}
 
-    ${!itens.length ? `
+    ${!visiveis.length ? `
       <div class="vazio">
-        <p><strong>Nenhuma dose programada para hoje.</strong></p>
+        <p><strong>Nenhuma dose programada para hoje${filtroHoje === 'acompanho' && itens.length ? ' para quem você acompanha' : ''}.</strong></p>
         <p>As doses aparecem aqui quando um medicamento em uso tem horários cadastrados.</p>
       </div>` : ''}
+
+    <p style="margin-top:16px"><a class="link-discreto" href="#/notificacoes">Receber lembretes no celular</a></p>
 
     ${grupos.map(([titulo, lista]) => lista.length ? `
       <section class="grupo">
@@ -682,7 +704,7 @@ export async function telaHoje() {
   const filtro = document.getElementById('filtro');
   if (filtro) filtro.onchange = () => {
     filtroHoje = filtro.value;
-    try { localStorage.setItem('cris-filtro-hoje', filtroHoje); } catch {}
+    try { localStorage.setItem('cris-filtro-doses', filtroHoje); } catch {}
     telaHoje();
   };
 

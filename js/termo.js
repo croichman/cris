@@ -4,8 +4,8 @@
 // então todos precisarão aceitar de novo assim que o banco mudar.
 import { sb, app, estado, esc, aviso, mensagemErro, ocupado, mostrarErro } from './base.js';
 
-export const TERMO_VERSAO = 2;          // versão do texto abaixo
-export const TERMO_DATA = '09/11/2026';
+export const TERMO_VERSAO = 3;          // versão do texto abaixo
+export const TERMO_DATA = '20/11/2026';
 const ADMIN_SISTEMA = 'Carlos Roichman'; // responsável pelo CRIS
 
 async function nomesDosMasters() {
@@ -24,7 +24,7 @@ async function textoDoTermo() {
       <h1>Termo de consentimento</h1>
       <p class="acesso">Versão ${TERMO_VERSAO}, de ${TERMO_DATA}</p>
 
-      <p>O CRIS é um app de uso familiar, em fase de testes (Beta) e sem fins comerciais. Ele serve
+      <p>O CRIS (Central de Registros e Informações de Saúde) é um app de uso familiar, em fase de testes (Beta) e sem fins comerciais. Ele serve
       para registrar medicamentos, médicos, vacinas e outras informações de saúde, e para facilitar o
       cuidado entre familiares. Cada família usa o app separadamente: as informações de uma família não
       ficam visíveis para as outras. Para usar o app, você precisa ler e concordar com este termo.</p>
@@ -58,10 +58,15 @@ async function textoDoTermo() {
 
       <h2>Administração do app</h2>
       <p>O CRIS é mantido por ${esc(ADMIN_SISTEMA)}, administrador do sistema. Ele cria as famílias e
-      convida quem vai ser master de cada uma, e por isso consegue ver o nome das famílias, o nome e o
-      e-mail dos masters e a quantidade de pessoas e perfis de cada família. As regras do banco de dados
-      <strong>não permitem</strong> que o administrador veja informações de saúde de outras famílias.
-      Ele só tem acesso aos dados da família da qual ele mesmo faz parte, como qualquer outro master.</p>
+      convida quem vai ser master de cada uma. <strong>Pelo app</strong>, ele vê apenas o nome das famílias,
+      o nome e o e-mail dos masters e a quantidade de pessoas e perfis de cada família; as regras do app
+      não mostram a ele informações de saúde de outras famílias.</p>
+      <p>Para ser transparente: como responsável técnico pelo servidor, o administrador tem acesso ao
+      painel do Supabase, que permite consultar o banco de dados completo. Ele se compromete a usar esse
+      acesso apenas para manutenção e correção de problemas, nunca para consultar informações de saúde de
+      outras famílias, e a mantê-lo protegido por senha e verificação em duas etapas. A empresa Supabase,
+      que hospeda os dados, também tem acesso técnico à infraestrutura, nos termos da política de
+      privacidade dela.</p>
 
       <h2>Dados de outras pessoas</h2>
       <p>Só cadastre informações de outra pessoa se você for responsável por ela, como filhos menores
@@ -70,7 +75,8 @@ async function textoDoTermo() {
       <h2>Onde os dados ficam</h2>
       <p>Os dados são guardados no serviço Supabase, em servidores em São Paulo, com acesso protegido
       por login. As fotos são privadas e só abrem para quem tem acesso ao perfil. Os códigos de acesso
-      são enviados por e-mail pelo Gmail. Nenhum sistema é totalmente seguro: não compartilhe os seus
+      são enviados por e-mail pelo Gmail. Os lembretes no celular passam, de forma criptografada,
+      pelos serviços de notificação do Google ou da Apple. Nenhum sistema é totalmente seguro: não compartilhe os seus
       códigos de acesso com ninguém.</p>
 
       <h2>Limites do app</h2>

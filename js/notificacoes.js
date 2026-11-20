@@ -113,9 +113,10 @@ export async function telaNotificacoes() {
   const outros = (aparelhos || []).filter((a) => !sub || a.endpoint !== sub.endpoint);
 
   app.innerHTML = `
-    <header class="topo"><a class="voltar" href="#/conta">‹ Minha conta</a></header>
-    <h1 style="margin-bottom:6px">Notificações</h1>
-    <p class="acesso">O CRIS avisa na hora de cada dose. Se a dose já tiver sido registrada (por você ou por outra pessoa), o aviso não é enviado.</p>
+    <header class="topo"><a class="voltar" id="voltar-notif" href="#/conta">‹ Voltar</a></header>
+    <h1 style="margin-bottom:6px">Doses e lembretes</h1>
+    <p class="acesso">Escolha de quem você acompanha as doses e se quer receber avisos no celular. Se a dose já tiver
+      sido registrada (por você ou por outra pessoa), o aviso não é enviado.</p>
 
     <section class="bloco">
       <h2>Este aparelho</h2>
@@ -123,8 +124,9 @@ export async function telaNotificacoes() {
     </section>
 
     <section class="bloco">
-      <h2>Lembrar das doses de</h2>
-      <p class="acesso">Escolha de quais perfis você quer receber os avisos. Vale para todos os seus aparelhos com notificações ativas.</p>
+      <h2>Acompanhar as doses de</h2>
+      <p class="acesso">Os perfis marcados aparecem em "Doses de hoje" e geram avisos nos seus aparelhos com
+        notificações ativas. ${!marcados.size ? 'Enquanto você não marcar nenhum, "Doses de hoje" mostra só o seu perfil.' : ''}</p>
       ${perfis.length ? `<div class="opcoes">${perfis.map((p) => `
         <label class="marcar">
           <input type="checkbox" class="perfil-lembrete" value="${p.id}" ${marcados.has(p.id) ? 'checked' : ''}>
@@ -142,6 +144,11 @@ export async function telaNotificacoes() {
             <span class="med-quando">Ativado em ${new Date(a.criado_em).toLocaleDateString('pt-BR')}</span>
             <button class="botao discreto remover-aparelho" data-id="${a.id}">Remover</button></li>`).join('')}</ul>
       </section>` : ''}`;
+
+  // Volta para onde a pessoa estava (Doses de hoje ou Minha conta)
+  document.getElementById('voltar-notif').onclick = (ev) => {
+    if (history.length > 1) { ev.preventDefault(); history.back(); }
+  };
 
   const bAtivar = document.getElementById('ativar');
   if (bAtivar) bAtivar.onclick = async () => {
@@ -184,7 +191,7 @@ export async function telaNotificacoes() {
       : await sb.from('lembrete_destinatarios').delete().eq('perfil_id', c.value).eq('usuario_id', estado.eu.id);
     c.disabled = false;
     if (e && !/duplicate/i.test(e.message)) { c.checked = !c.checked; aviso(mensagemErro(e)); }
-    else aviso(c.checked ? 'Lembretes ligados para este perfil' : 'Lembretes desligados para este perfil');
+    else aviso(c.checked ? 'Você passou a acompanhar este perfil' : 'Você deixou de acompanhar este perfil');
   });
 
   app.querySelectorAll('.remover-aparelho').forEach((b) => b.onclick = async () => {
