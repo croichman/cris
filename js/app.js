@@ -1,5 +1,6 @@
 // CRIS — app principal: login, perfis, conta e rotas
 import { formatarTelefone } from './contatos.js';
+import { botaoSOS, ativarBotaoSOS, guardarContatoSOS, contatoSOSGuardado } from './sos.js';
 import {
   sb, app, estado, esc, aviso, idade, dataBR, corDoPerfil, primeiroNome, mensagemErro,
   ocupado, mostrarErro, acessoAoPerfil
@@ -232,8 +233,10 @@ async function telaInicio() {
   if (!navigator.onLine) {
     app.innerHTML = `
       <header class="topo"><span class="marca">CRIS</span></header>
+      ${botaoSOS(contatoSOSGuardado())}
       <p class="aviso-offline">Sem internet. As fichas de emergência salvas neste aparelho continuam disponíveis.</p>
       ${htmlFichasOffline() || '<p class="acesso">Nenhuma ficha salva neste aparelho ainda.</p>'}`;
+    ativarBotaoSOS(contatoSOSGuardado());
     return;
   }
   app.innerHTML = `
@@ -244,7 +247,7 @@ async function telaInicio() {
     <div class="carregando" style="padding-top:20vh">Carregando perfis…</div>`;
 
   const [{ data: perfis, error }, { data: compart }] = await Promise.all([
-    sb.from('perfis').select('id, nome, data_nascimento, tipo_sanguineo, dono_id, usuario_vinculado_id, fuso_horario').order('nome'),
+    sb.from('perfis').select('id, nome, data_nascimento, tipo_sanguineo, dono_id, usuario_vinculado_id, fuso_horario, contato_emergencia_nome, contato_emergencia_telefone').order('nome'),
     sb.from('compartilhamentos').select('perfil_id, nivel').eq('usuario_id', estado.eu.id)
   ]);
   if (error) {
@@ -261,6 +264,15 @@ async function telaInicio() {
     else if ((compart || []).some((c) => c.perfil_id === p.id)) compartilhados.push(p);
     else outros.push(p);
   }
+  // Botão de emergência: contato de emergência do perfil da própria pessoa (guardado para uso offline)
+  const proprio = perfis.find((p) => p.usuario_vinculado_id === eu.id);
+  guardarContatoSOS(proprio, eu.id);
+  const sos = proprio ? {
+    perfilId: proprio.id, pessoa: proprio.nome,
+    nome: proprio.contato_emergencia_nome || '', telefone: proprio.contato_emergencia_telefone || ''
+  } : null;
+  const linkCadastroSOS = proprio ? `#/perfil/${proprio.id}/editar` : '#/perfil/novo';
+
   // O perfil da própria pessoa vem primeiro
   meus.sort((a, b) => (b.usuario_vinculado_id === eu.id) - (a.usuario_vinculado_id === eu.id));
 
@@ -320,6 +332,8 @@ async function telaInicio() {
       ${eu.admin_sistema ? '<p><a href="#/admin">Administração do sistema</a></p>' : ''}
     </div>
 
+    ${botaoSOS(sos, { linkCadastro: linkCadastroSOS })}
+
     ${resumo ? `
       <a class="cartao-hoje ${resumo.atrasadas ? 'com-atraso' : ''}" href="#/hoje">
         <span class="conteudo">
@@ -343,6 +357,7 @@ async function telaInicio() {
     <div class="botoes">
       <a class="botao principal" href="#/perfil/novo">Novo perfil</a>
     </div>`;
+  ativarBotaoSOS(sos);
 }
 
 // ======================================================================
@@ -664,7 +679,7 @@ async function sair() {
   estado.sessao = null;
   try { await sb.auth.signOut(); } catch { /* sem internet: a sessão local é apagada mesmo assim */ }
   apagarFichasSalvas();
-  try { localStorage.removeItem('cris-eu'); } catch { /* nada */ }
+  try { localStorage.removeItem('cris-eu'); localStorage.removeItem('cris-sos'); } catch { /* nada */ }
   estado.eu = null;
   location.hash = '#/';
 }
