@@ -315,6 +315,7 @@ export async function telaFormMedico(perfilId, id) {
           <button class="botao secundario" type="button" id="do-celular">Preencher com um contato do celular</button>` : ''}
         <label class="botao ${temSeletorDeContatos() ? 'discreto' : 'secundario'}" for="arquivo-vcf">Importar cartão de contato (.vcf)</label>
         <input id="arquivo-vcf" type="file" accept=".vcf,text/vcard,text/x-vcard" hidden>
+        <p class="ajuda" id="diag-contato" hidden></p>
         ${!temSeletorDeContatos() ? `
           <p class="ajuda">No iPhone: abra o contato no app <strong>Contatos</strong>, toque em
             <strong>Compartilhar Contato</strong> → <strong>Salvar em Arquivos</strong>. Depois toque no botão acima e escolha o arquivo.</p>` : ''}
@@ -344,15 +345,30 @@ export async function telaFormMedico(perfilId, id) {
 
   const form = document.getElementById('form-medico');
 
-  const aplicarContato = (dados) => {
-    if (!dados) return;
-    const n = preencherFormulario(form, dados);
-    aviso(n ? 'Dados do contato preenchidos. Confira e salve.' : 'O contato não tinha dados para preencher.');
+  const diag = document.getElementById('diag-contato');
+  const aplicarContato = (dados, diagnostico) => {
+    // O formulário pode ter sido redesenhado enquanto a agenda estava aberta: usa o atual
+    const alvo = document.getElementById('form-medico') || form;
+    const n = dados ? preencherFormulario(alvo, dados) : 0;
+    if (n) {
+      aviso('Dados do contato preenchidos. Confira e salve.');
+      diag.hidden = true;
+    } else {
+      aviso(dados ? 'O contato veio sem dados para preencher.' : 'O celular não devolveu nenhum contato.');
+      if (diagnostico) { diag.textContent = `Detalhe técnico: ${diagnostico}`; diag.hidden = false; }
+    }
   };
   const bCelular = document.getElementById('do-celular');
   if (bCelular) bCelular.onclick = async () => {
-    try { aplicarContato(await escolherContato()); }
-    catch (e) { if (e?.name !== 'AbortError') aviso('Não foi possível abrir os contatos do celular.'); }
+    try {
+      const r = await escolherContato();
+      aplicarContato(r.dados, r.diagnostico);
+    } catch (e) {
+      if (e?.name === 'AbortError') return;
+      aviso('Não foi possível ler o contato do celular.');
+      diag.textContent = `Detalhe técnico: ${e?.name || ''} ${e?.message || e}`;
+      diag.hidden = false;
+    }
   };
   const arqVcf = document.getElementById('arquivo-vcf');
   arqVcf.onchange = async () => {
@@ -362,7 +378,7 @@ export async function telaFormMedico(perfilId, id) {
     if (arq.size > 2 * 1024 * 1024) return aviso('Arquivo grande demais para um cartão de contato.');
     const dados = lerVcard(await arq.text());
     if (!dados) return aviso('Esse arquivo não parece um cartão de contato (.vcf).');
-    aplicarContato(dados);
+    aplicarContato(dados, 'arquivo .vcf sem campos reconhecidos');
   };
 
   form.addEventListener('submit', async (ev) => {

@@ -26,20 +26,39 @@ function separarTelefones(lista) {
 }
 
 // ---------- Android: agenda do celular ----------
+// Quais campos o celular oferece: consultado antes do toque, para o botão abrir a agenda sem esperas
+let camposDisponiveis = ['name', 'tel', 'email'];
+if (temSeletorDeContatos()) {
+  navigator.contacts.getProperties().then((p) => { if (p?.length) camposDisponiveis = p; }).catch(() => {});
+}
+
+// Devolve { dados, diagnostico }. diagnostico ajuda a entender celulares que respondem diferente.
 export async function escolherContato() {
-  const disponiveis = await navigator.contacts.getProperties().catch(() => ['name', 'tel', 'email']);
-  const pedir = ['name', 'tel', 'email', 'address'].filter((p) => disponiveis.includes(p));
-  const [c] = await navigator.contacts.select(pedir, { multiple: false });
-  if (!c) return null;
-  const end = c.address?.[0];
+  const pedir = ['name', 'tel', 'email', 'address'].filter((p) => camposDisponiveis.includes(p));
+  let lista;
+  try {
+    lista = await navigator.contacts.select(pedir, { multiple: false });
+  } catch (e) {
+    if (e?.name === 'AbortError') throw e;
+    // Alguns celulares recusam o pedido de endereço: tenta de novo só com o básico
+    lista = await navigator.contacts.select(['name', 'tel', 'email'].filter((p) => camposDisponiveis.includes(p)), { multiple: false });
+  }
+  const c = Array.isArray(lista) ? lista[0] : null;
+  const diagnostico = `pedido: ${pedir.join(',')} · recebido: ${Array.isArray(lista) ? lista.length : typeof lista} contato(s)` +
+    (c ? ` · campos: ${Object.keys(c).map((k) => `${k}=${Array.isArray(c[k]) ? c[k].length : c[k] ? 1 : 0}`).join(', ')}` : '');
+  if (!c) return { dados: null, diagnostico };
+  const end = (c.address || [])[0];
   const endereco = end ? [
     (end.addressLine || []).join(', '), end.dependentLocality, end.city, end.region
   ].filter(Boolean).join(', ') : '';
   return {
-    nome: (c.name || [])[0] || '',
-    ...separarTelefones((c.tel || []).map((numero) => ({ numero, tipos: [] }))),
-    email: (c.email || [])[0] || '',
-    endereco
+    dados: {
+      nome: (c.name || []).find(Boolean) || '',
+      ...separarTelefones((c.tel || []).map((numero) => ({ numero, tipos: [] }))),
+      email: (c.email || []).find(Boolean) || '',
+      endereco
+    },
+    diagnostico
   };
 }
 

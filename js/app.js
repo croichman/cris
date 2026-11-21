@@ -694,7 +694,15 @@ if ('serviceWorker' in navigator) {
   // quando a versão nova assume, recarrega uma vez para mostrar as novidades
   let recarregou = false;
   const tinhaControle = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (tinhaControle && !recarregou) { recarregou = true; location.reload(); }
-  });
+  // Se a pessoa está preenchendo um formulário, espera ela sair da tela para não perder o que digitou
+  const recarregar = () => {
+    if (recarregou) return;
+    if (app.querySelector('form input, form textarea, form select')) {
+      window.addEventListener('hashchange', () => { recarregou = true; location.reload(); }, { once: true });
+      return;
+    }
+    recarregou = true;
+    location.reload();
+  };
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (tinhaControle) recarregar(); });
 }
