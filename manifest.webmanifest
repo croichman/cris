@@ -25,5 +25,28 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "./compartilhar",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "contato",
+          "accept": [
+            "text/vcard",
+            "text/x-vcard",
+            "text/directory",
+            "text/plain",
+            ".vcf",
+            ".vcard"
+          ]
+        }
+      ]
+    }
+  }
 }

@@ -15,7 +15,7 @@ export function formatarTelefone(bruto) {
   if (d.length === 10) return `${d.slice(0, 2)} ${d.slice(2, 6)}-${d.slice(6)}`;
   return String(bruto).trim();
 }
-const ehCelular = (tel) => /^\d{2} 9\d{4}-\d{4}$/.test(formatarTelefone(tel));
+const ehCelular = (tel) => /^\d{2} 9\d{4}-\d{4}$/.test(formatarTelefone(tel)) || /^9\d{8}$/.test(String(tel).replace(/\D/g, ''));
 
 // Escolhe telefone fixo e WhatsApp a partir de uma lista [{ numero, tipos }]
 function separarTelefones(lista) {
@@ -130,6 +130,29 @@ export function lerVcard(texto) {
     endereco,
     observacoes: um('NOTE') ? desescapar(um('NOTE').valor) : ''
   };
+}
+
+// ---------- Contato compartilhado como texto (ex.: "Compartilhar como texto") ----------
+export function lerTextoContato(texto) {
+  if (!texto || !texto.trim()) return null;
+  if (/BEGIN:VCARD/i.test(texto)) return lerVcard(texto);
+  const linhas = texto.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const email = (texto.match(/[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+/) || [])[0] || '';
+  const numeros = (texto.match(/\+?\d[\d ()\-.]{7,}\d/g) || []).map((n) => ({ numero: n, tipos: [] }));
+  const nome = linhas.find((l) => !/\d{4}/.test(l) && !l.includes('@') && !/^https?:/i.test(l)) || '';
+  return { nome: nome.replace(/^(nome|name)\s*:\s*/i, ''), ...separarTelefones(numeros), email };
+}
+
+// Lê (e apaga) o último contato recebido pelo "Compartilhar" do celular
+export async function lerContatoCompartilhado() {
+  if (!('caches' in window)) return null;
+  const c = await caches.open('cris-compartilhado');
+  const r = await c.match('./ultimo-contato');
+  if (!r) return null;
+  await c.delete('./ultimo-contato');
+  const d = await r.json().catch(() => null);
+  if (!d || Date.now() - (d.em || 0) > 30 * 60000) return null;
+  return (d.vcf && lerVcard(d.vcf)) || lerTextoContato(d.texto);
 }
 
 // Preenche o formulário: só sobrescreve campos para os quais o contato trouxe valor

@@ -1,8 +1,8 @@
 // CRIS — alergias, condições de saúde, vacinas e médicos
-import { temSeletorDeContatos, escolherContato, lerVcard, preencherFormulario } from './contatos.js';
+import { temSeletorDeContatos, escolherContato, lerVcard, preencherFormulario, lerContatoCompartilhado } from './contatos.js';
 import {
   sb, app, estado, esc, aviso, dataBR, primeiroNome, mensagemErro, ocupado, mostrarErro,
-  perfilComAcesso, hojeNoFuso, enviarFoto, apagarFotos, linksDasFotos
+  perfilComAcesso, hojeNoFuso, enviarFoto, apagarFotos, linksDasFotos, acessoAoPerfil
 } from './base.js';
 
 // ======================================================================
@@ -316,6 +316,9 @@ export async function telaFormMedico(perfilId, id) {
         <label class="botao ${temSeletorDeContatos() ? 'discreto' : 'secundario'}" for="arquivo-vcf">Importar cartão de contato (.vcf)</label>
         <input id="arquivo-vcf" type="file" accept=".vcf,text/vcard,text/x-vcard" hidden>
         <p class="ajuda" id="diag-contato" hidden></p>
+        ${temSeletorDeContatos() ? `
+          <p class="ajuda">Se não funcionar no seu celular: abra o médico no app <strong>Contatos</strong>, toque em
+            <strong>Compartilhar</strong> e escolha o <strong>CRIS</strong>.</p>` : ''}
         ${!temSeletorDeContatos() ? `
           <p class="ajuda">No iPhone: abra o contato no app <strong>Contatos</strong>, toque em
             <strong>Compartilhar Contato</strong> → <strong>Salvar em Arquivos</strong>. Depois toque no botão acima e escolha o arquivo.</p>` : ''}
@@ -345,6 +348,13 @@ export async function telaFormMedico(perfilId, id) {
 
   const form = document.getElementById('form-medico');
 
+  // Veio do "Compartilhar" dos Contatos: preenche já
+  if (estado.contatoPendente && !id) {
+    preencherFormulario(form, estado.contatoPendente);
+    estado.contatoPendente = null;
+    aviso('Dados do contato preenchidos. Confira e salve.');
+  }
+
   const diag = document.getElementById('diag-contato');
   const aplicarContato = (dados, diagnostico) => {
     // O formulário pode ter sido redesenhado enquanto a agenda estava aberta: usa o atual
@@ -354,7 +364,7 @@ export async function telaFormMedico(perfilId, id) {
       aviso('Dados do contato preenchidos. Confira e salve.');
       diag.hidden = true;
     } else {
-      aviso(dados ? 'O contato veio sem dados para preencher.' : 'O celular não devolveu o contato. Toque de novo: o app vai tentar de outro jeito.');
+      aviso(dados ? 'O contato veio sem dados para preencher.' : 'Este celular não entregou o contato por aqui. Use o Compartilhar dos Contatos (veja abaixo).');
       if (diagnostico) { diag.textContent = `Detalhe técnico: ${diagnostico}`; diag.hidden = false; }
     }
   };
@@ -436,4 +446,51 @@ export async function telaFormMedico(perfilId, id) {
     aviso('Médico removido do perfil');
     location.hash = voltar;
   };
+}
+
+
+// ======================================================================
+// Contato recebido pelo "Compartilhar" do celular → escolher a pessoa
+// ======================================================================
+export async function telaContatoCompartilhado() {
+  app.innerHTML = `<div class="carregando">Carregando…</div>`;
+  const dados = await lerContatoCompartilhado().catch(() => null) || estado.contatoPendente;
+  if (!dados || !(dados.nome || dados.telefone || dados.whatsapp || dados.email)) {
+    app.innerHTML = `
+      <header class="topo"><a class="voltar" href="#/">‹ Perfis</a></header>
+      <h1>Contato não recebido</h1>
+      <p>O CRIS não conseguiu ler o contato compartilhado. No app Contatos, tente compartilhar de novo
+        escolhendo o formato <strong>vCard</strong> (arquivo .vcf), se o celular perguntar.</p>`;
+    return;
+  }
+  estado.contatoPendente = dados;
+
+  const [{ data: perfis }, { data: compart }] = await Promise.all([
+    sb.from('perfis').select('id, nome, dono_id, usuario_vinculado_id').order('nome'),
+    sb.from('compartilhamentos').select('perfil_id, nivel').eq('usuario_id', estado.eu.id)
+  ]);
+  const editaveis = (perfis || []).filter((p) => ['editar', 'gerenciar'].includes(acessoAoPerfil(p, compart || [])?.nivel));
+
+  app.innerHTML = `
+    <header class="topo"><a class="voltar" href="#/">‹ Cancelar</a></header>
+    <h1 style="margin-bottom:6px">Adicionar médico</h1>
+    <div class="bloco">
+      <p style="margin:0"><strong>${esc(dados.nome || 'Contato sem nome')}</strong></p>
+      ${[dados.whatsapp, dados.telefone !== dados.whatsapp ? dados.telefone : '', dados.email].filter(Boolean)
+        .map((x) => `<p class="acesso" style="margin:2px 0 0">${esc(x)}</p>`).join('')}
+    </div>
+    ${editaveis.length ? `
+      <form id="form-quem" novalidate>
+        <div class="campo"><label for="quem">Este profissional atende</label>
+          <select id="quem" name="perfil">
+            ${editaveis.map((p) => `<option value="${p.id}" ${p.usuario_vinculado_id === estado.eu.id ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}
+          </select></div>
+        <button class="botao principal" type="submit">Continuar</button>
+      </form>` : '<p>Você não tem nenhum perfil que possa editar.</p>'}`;
+
+  const f = document.getElementById('form-quem');
+  if (f) f.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    location.hash = `#/perfil/${f.perfil.value}/medico/novo`;
+  });
 }

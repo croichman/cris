@@ -1,6 +1,6 @@
 // Service worker do CRIS: guarda os arquivos do app para abrir rápido e sem internet.
 // Ao publicar uma nova versão, aumente o número abaixo.
-const VERSAO = 'cris-v16';
+const VERSAO = 'cris-v17';
 const ARQUIVOS = [
   './',
   'index.html',
@@ -33,13 +33,34 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((nomes) => Promise.all(nomes.filter((n) => n !== VERSAO).map((n) => caches.delete(n))))
+      .then((nomes) => Promise.all(nomes.filter((n) => n !== VERSAO && n !== 'cris-compartilhado').map((n) => caches.delete(n))))
       .then(() => self.clients.claim())
   );
 });
 
+// ---------- Receber contato compartilhado (Contatos → Compartilhar → CRIS) ----------
+// O Android envia o contato para ./compartilhar. Guardamos numa caixa local e abrimos o app.
+async function receberCompartilhado(req) {
+  try {
+    const form = await req.formData();
+    const arq = form.get('contato');
+    const dados = {
+      vcf: arq && typeof arq !== 'string' ? await arq.text() : '',
+      texto: [form.get('title'), form.get('text')].filter(Boolean).join('\n'),
+      em: Date.now()
+    };
+    const c = await caches.open('cris-compartilhado');
+    await c.put('./ultimo-contato', new Response(JSON.stringify(dados), { headers: { 'Content-Type': 'application/json' } }));
+  } catch { /* abre o app mesmo assim; a tela avisa que nada chegou */ }
+  return Response.redirect(new URL('./#/compartilhado', self.registration.scope).href, 303);
+}
+
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
+  if (e.request.method === 'POST' && url.pathname.endsWith('/compartilhar')) {
+    e.respondWith(receberCompartilhado(e.request));
+    return;
+  }
   if (e.request.method !== 'GET') return;
   // Dados do Supabase sempre vêm da internet (nunca do cache).
   if (url.hostname.endsWith('supabase.co')) return;
