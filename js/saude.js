@@ -354,7 +354,7 @@ export async function telaFormMedico(perfilId, id) {
       aviso('Dados do contato preenchidos. Confira e salve.');
       diag.hidden = true;
     } else {
-      aviso(dados ? 'O contato veio sem dados para preencher.' : 'O celular não devolveu nenhum contato.');
+      aviso(dados ? 'O contato veio sem dados para preencher.' : 'O celular não devolveu o contato. Toque de novo: o app vai tentar de outro jeito.');
       if (diagnostico) { diag.textContent = `Detalhe técnico: ${diagnostico}`; diag.hidden = false; }
     }
   };

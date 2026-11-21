@@ -33,18 +33,25 @@ if (temSeletorDeContatos()) {
 }
 
 // Devolve { dados, diagnostico }. diagnostico ajuda a entender celulares que respondem diferente.
+// Alguns celulares devolvem "nenhum contato" quando se pedem certos campos.
+// A cada tentativa vazia, o app passa a pedir menos campos e guarda o que funcionou.
+const MODOS = [['name', 'tel', 'email'], ['name', 'tel'], ['name'], ['name', 'tel', 'email', 'address']];
+const lerModo = () => { try { return Number(localStorage.getItem('cris-modo-agenda')) || 0; } catch { return 0; } };
+const gravarModo = (m) => { try { localStorage.setItem('cris-modo-agenda', String(m)); } catch {} };
+
 export async function escolherContato() {
-  const pedir = ['name', 'tel', 'email', 'address'].filter((p) => camposDisponiveis.includes(p));
+  const modo = lerModo() % MODOS.length;
+  const pedir = MODOS[modo].filter((p) => camposDisponiveis.includes(p));
   let lista;
   try {
     lista = await navigator.contacts.select(pedir, { multiple: false });
   } catch (e) {
-    if (e?.name === 'AbortError') throw e;
-    // Alguns celulares recusam o pedido de endereço: tenta de novo só com o básico
-    lista = await navigator.contacts.select(['name', 'tel', 'email'].filter((p) => camposDisponiveis.includes(p)), { multiple: false });
+    if (e?.name !== 'AbortError') gravarModo(modo + 1);
+    throw e;
   }
   const c = Array.isArray(lista) ? lista[0] : null;
-  const diagnostico = `pedido: ${pedir.join(',')} · recebido: ${Array.isArray(lista) ? lista.length : typeof lista} contato(s)` +
+  if (!c) gravarModo(modo + 1);
+  const diagnostico = `modo ${modo + 1} · pedido: ${pedir.join(',')} · disponíveis: ${camposDisponiveis.join(',')} · recebido: ${Array.isArray(lista) ? lista.length : typeof lista} contato(s)` +
     (c ? ` · campos: ${Object.keys(c).map((k) => `${k}=${Array.isArray(c[k]) ? c[k].length : c[k] ? 1 : 0}`).join(', ')}` : '');
   if (!c) return { dados: null, diagnostico };
   const end = (c.address || [])[0];
