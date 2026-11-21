@@ -1,7 +1,7 @@
 # CRIS — Documentação técnica
 
 Central de Registros e Informações de Saúde. Este documento descreve a arquitetura, o modelo de dados,
-as regras de segurança e a operação do sistema. Versão do app no momento da escrita: **0.18 Beta**.
+as regras de segurança e a operação do sistema. Versão do app no momento da escrita: **0.19 Beta**.
 
 ---
 
@@ -38,6 +38,7 @@ as regras de segurança e a operação do sistema. Versão do app no momento da 
 | `contatos.js` | Preencher médico a partir de: contato compartilhado para o app (Web Share Target no Android: `share_target` no manifest → `sw.js` grava em `caches['cris-compartilhado']` → rota `#/compartilhado`), agenda (Contact Picker API; falha em alguns Samsung, devolvendo lista vazia) ou cartão `.vcf` (iPhone/computador). Nada sai do aparelho |
 | `sos.js` | Botão de emergência da Início: contato de emergência do perfil próprio (guardado em `localStorage` `cris-sos` para uso offline; apagado ao sair), ligar, WhatsApp e SMS com mensagem padrão e localização, 192 |
 | `emergencia.js` | Ficha de emergência e cópia offline no `localStorage` |
+| `agenda.js` | Agenda (`eventos`): bloco no perfil, tela `#/agenda` (filtro como em Doses de hoje), formulário, cartão "Próximos compromissos" na Início |
 | `quadro.js` | Quadro semanal (dias × horários) para impressão/PDF |
 | `notificacoes.js` | Ativar Web Push no aparelho, escolher perfis acompanhados |
 | `familia.js` | Papéis, delegações, convites, compartilhamento de perfil; `chamarFuncao` |
@@ -61,7 +62,9 @@ Rotas principais: `#/`, `#/hoje`, `#/perfil/:id`, `#/perfil/:id/quadro`, `#/fich
 | `doses` | Registro de doses | `previsto_para`, `registrado_em` (quando anotou), `tomado_em` (quando tomou), `status` |
 | `alergias`, `condicoes`, `vacinas` | Dados de saúde por perfil | |
 | `profissionais`, `perfil_profissionais` | Médicos da família e vínculo com perfis | por família |
-| `lembrete_destinatarios` | Quem acompanha as doses de qual perfil | Define "Doses de hoje" e quem recebe lembretes |
+| `lembrete_destinatarios` | Quem acompanha qual perfil | Define "Doses de hoje", a agenda da Início e quem recebe lembretes |
+| `eventos` | Compromissos (consulta, exame, retorno, vacina…) | `inicio`, `situacao`, `lembrete_vespera` (19h da véspera), `lembrete_minutos_antes` |
+| `notificacoes_eventos_enviadas` | Avisos de agenda já enviados | `momento` = `vespera`/`antes`; limpeza após 30 dias |
 | `push_inscricoes` | Aparelhos com notificação ativa | `endpoint`, chaves `p256dh`/`auth` |
 | `notificacoes_enviadas` | Lembretes já enviados | Evita duplicidade; limpeza após 7 dias |
 | `termo_aceites` | Aceites do termo por versão | |
@@ -85,7 +88,8 @@ Arquivos (Storage, bucket `cris-arquivos`, privado): caminho começa com o `id` 
 | `pode_ver_perfil(p)` / `pode_editar_perfil(p)` / `pode_gerenciar_perfil(p)` | níveis de acesso ao perfil, sempre dentro da família |
 | `admin_familias()` | lista de famílias com contagens (só para o admin; sem dados de saúde) |
 | `registrar_push(...)` | grava a inscrição do aparelho para o usuário logado |
-| `lembretes_pendentes()` | doses a notificar agora (só `service_role`) |
+| `lembretes_pendentes()` | doses a notificar agora (só `service_role`; respeita `usuarios.avisar_remedios`) |
+| `lembretes_eventos_pendentes()` | avisos de agenda a enviar agora (só `service_role`; respeita `usuarios.avisar_agenda`) |
 
 ### 4.2 Regras (RLS)
 
@@ -159,6 +163,7 @@ select status_code, content, created from net._http_response order by created de
 | `2026-11-12_agendador_lembretes.sql` | Job do `pg_cron` (preencher o `CRON_SECRET`) |
 | `2026-11-15_corrige_criar_perfil.sql` | Correção da regra `perfis: ver` |
 | `2026-11-20_termo_v3.sql` | Termo versão 3 (transparência sobre acesso técnico) |
+| `2026-11-21_agenda.sql` | Agenda, preferências de aviso, lembretes de agenda |
 
 O schema anterior a 09/11/2026 (tabelas originais, funções `pode_*`, gatilhos de histórico, bucket) foi criado
 direto no painel e não está versionado. Para reconstruir o ambiente do zero, exportar o schema atual
@@ -171,7 +176,7 @@ Banco 500 MB, Storage 1 GB, 50 mil usuários ativos/mês, 500 mil chamadas de fu
 
 ## 8. Pendências e próximos passos
 
-- Agenda (consultas e exames), resultados de exames e anexos (PDF/imagem).
+- Resultados de exames e anexos (PDF/imagem, até 1 MB; fotos reduzidas no aparelho; opção de link).
 - Leitura automática de exames e receitas por IA (opcional, com consentimento específico).
 - Segundo lembrete quando a dose continua sem registro 30 min depois.
 - Compartilhamento de perfil entre famílias diferentes.

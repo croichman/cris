@@ -15,6 +15,7 @@ import { blocoItens, telaFormItem, blocoMedicos, telaFormMedico, telaContatoComp
 import { telaAdmin } from './admin.js';
 import { telaQuadro } from './quadro.js';
 import { telaNotificacoes } from './notificacoes.js';
+import { telaAgenda, telaFormEvento, blocoAgenda, resumoAgenda, cartaoAgenda } from './agenda.js';
 import { telaFicha, atualizarFichas, htmlFichasOffline, fichasSalvas, apagarFichasSalvas } from './emergencia.js';
 
 // ======================================================================
@@ -31,6 +32,11 @@ const rotas = [
   [/^#\/familia$/, telaFamilia],
   [/^#\/admin$/, telaAdmin],
   [/^#\/notificacoes$/, telaNotificacoes],
+  [/^#\/agenda$/, () => telaAgenda()],
+  [/^#\/agenda\/([0-9a-f-]{36})$/, (m) => telaAgenda(m[1])],
+  [/^#\/evento\/novo$/, () => telaFormEvento(null, null)],
+  [/^#\/perfil\/([0-9a-f-]{36})\/evento\/novo$/, (m) => telaFormEvento(m[1], null)],
+  [/^#\/evento\/([0-9a-f-]{36})$/, (m) => telaFormEvento(null, m[1])],
   [/^#\/compartilhado$/, telaContatoCompartilhado],
   [/^#\/perfil\/([0-9a-f-]{36})\/quadro$/, (m) => telaQuadro(m[1])],
   [/^#\/ficha\/([0-9a-f-]{36})$/, (m) => telaFicha(m[1])],
@@ -278,7 +284,10 @@ async function telaInicio() {
 
   // O resumo de doses considera só quem a pessoa acompanha (ela escolhe em Notificações)
   const { lista: acompanhando } = await perfisAcompanhados(perfis);
-  const resumo = await resumoDoDia(acompanhando);
+  const [resumo, proximosEventos] = await Promise.all([
+    resumoDoDia(acompanhando),
+    resumoAgenda(acompanhando).catch(() => [])
+  ]);
 
   // Mantém as fichas de emergência de quem a pessoa acompanha salvas no aparelho (no máximo a cada 6 horas)
   const acompanhados = [...meus, ...cuidados, ...compartilhados];
@@ -342,6 +351,8 @@ async function telaInicio() {
         </span>
         <span class="seta" aria-hidden="true">›</span>
       </a>` : ''}
+
+    ${cartaoAgenda(proximosEventos)}
 
     ${perfis.length === 0 ? `
       <div class="vazio">
@@ -415,6 +426,7 @@ async function telaPerfil(id) {
 
     <div id="bloco-alergia"></div>
     <div id="bloco-meds"><div class="bloco"><p class="acesso">Carregando…</p></div></div>
+    <div id="bloco-agenda"></div>
     <div id="bloco-condicao"></div>
     <div id="bloco-medicos"></div>
     <div id="bloco-vacina"></div>
@@ -439,13 +451,14 @@ async function telaPerfil(id) {
         </dl>
       </section>` : ''}
   `;
-  const [html, htmlCompart, hAlergia, hCondicao, hMedicos, hVacina] = await Promise.all([
+  const [html, htmlCompart, hAlergia, hCondicao, hMedicos, hVacina, hAgenda] = await Promise.all([
     blocoMedicamentos(p.id, podeEditar),
     acesso.nivel === 'gerenciar' ? blocoCompartilhamento(p) : Promise.resolve(''),
     blocoItens('alergia', p.id, podeEditar),
     blocoItens('condicao', p.id, podeEditar),
     blocoMedicos(p.id, podeEditar),
-    blocoItens('vacina', p.id, podeEditar)
+    blocoItens('vacina', p.id, podeEditar),
+    blocoAgenda(p.id, podeEditar).catch(() => '')
   ]);
   if (!location.hash.endsWith(p.id)) return; // a pessoa já saiu desta tela
   const por = (idEl, h) => { const el = document.getElementById(idEl); if (el) el.innerHTML = h; };
@@ -454,6 +467,7 @@ async function telaPerfil(id) {
   por('bloco-condicao', hCondicao);
   por('bloco-medicos', hMedicos);
   por('bloco-vacina', hVacina);
+  por('bloco-agenda', hAgenda);
   const alvoC = document.getElementById('bloco-compart');
   if (alvoC && htmlCompart) {
     alvoC.innerHTML = htmlCompart;

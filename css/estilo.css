@@ -800,3 +800,21 @@ dialog.janela .botoes { margin-top: 12px; }
 .janela-sos .sos-opcoes { display: grid; gap: 10px; }
 .janela-sos .sos-opcoes .botao { text-align: center; }
 .botao.sos-ligar { background: #B3261E; color: #fff; border-color: #B3261E; font-size: 1.15rem; min-height: 56px; }
+
+/* ---------- Agenda ---------- */
+.lista-eventos .evento a, .lista-eventos .evento .item-fixo { display: flex; flex-direction: row; gap: 14px; align-items: flex-start; }
+.ev-quando { flex: none; width: 74px; font-size: 0.95rem; color: var(--tinta-suave); line-height: 1.35; }
+.ev-quando strong { color: var(--tinta); }
+.ev-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ev-apagado { opacity: 0.6; }
+.linha-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cartao-agenda {
+  display: flex; align-items: center; gap: 12px; margin: 0 0 16px; padding: 16px 18px;
+  border-radius: var(--raio); background: var(--superficie); border: 2px solid var(--linha);
+  color: inherit; text-decoration: none;
+}
+.cartao-agenda .conteudo { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.cartao-agenda .nome { font-weight: 700; font-size: 1.1rem; }
+.cartao-agenda .detalhe { color: var(--tinta-suave); }
+.cartao-agenda .seta { font-size: 1.6rem; color: var(--tinta-suave); }
+details.grupo summary { cursor: pointer; margin-bottom: 8px; }

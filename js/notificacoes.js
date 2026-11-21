@@ -124,8 +124,17 @@ export async function telaNotificacoes() {
     </section>
 
     <section class="bloco">
-      <h2>Acompanhar as doses de</h2>
-      <p class="acesso">Os perfis marcados aparecem em "Doses de hoje" e geram avisos nos seus aparelhos com
+      <h2>Quais avisos receber</h2>
+      <label class="marcar"><input type="checkbox" id="pref-remedios" ${estado.eu.avisar_remedios !== false ? 'checked' : ''}>
+        <span><strong>Horários de remédio</strong></span></label>
+      <label class="marcar"><input type="checkbox" id="pref-agenda" ${estado.eu.avisar_agenda !== false ? 'checked' : ''}>
+        <span><strong>Compromissos da agenda</strong><br>
+        <span class="ajuda" style="display:inline">Na véspera às 19h e antes do horário (como definido em cada compromisso).</span></span></label>
+    </section>
+
+    <section class="bloco">
+      <h2>Acompanhar</h2>
+      <p class="acesso">Os perfis marcados aparecem em "Doses de hoje" e na agenda da tela inicial, e geram avisos nos seus aparelhos com
         notificações ativas. ${!marcados.size ? 'Enquanto você não marcar nenhum, "Doses de hoje" mostra só o seu perfil.' : ''}</p>
       ${perfis.length ? `<div class="opcoes">${perfis.map((p) => `
         <label class="marcar">
@@ -183,6 +192,18 @@ export async function telaNotificacoes() {
       body: 'Assim aparece o lembrete na hora de cada dose.', icon: 'icons/icone-192.png', badge: 'icons/icone-192.png', tag: 'teste'
     });
   };
+
+  for (const [idEl, campo] of [['pref-remedios', 'avisar_remedios'], ['pref-agenda', 'avisar_agenda']]) {
+    const c = document.getElementById(idEl);
+    c.onchange = async () => {
+      c.disabled = true;
+      const { error: e } = await sb.from('usuarios').update({ [campo]: c.checked }).eq('id', estado.eu.id);
+      c.disabled = false;
+      if (e) { c.checked = !c.checked; return aviso(mensagemErro(e)); }
+      estado.eu[campo] = c.checked;
+      aviso(c.checked ? 'Avisos ligados' : 'Avisos desligados');
+    };
+  }
 
   app.querySelectorAll('.perfil-lembrete').forEach((c) => c.onchange = async () => {
     c.disabled = true;

@@ -1,0 +1,26 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="css/estilo.css"></head><body><main id="app"></main><div id="aviso"></div>
+<script>
+const H=3600000, iso=(ms)=>new Date(Date.now()+ms).toISOString();
+const P=[{id:'11111111-1111-1111-1111-111111111111',nome:'Carlos Roichman',dono_id:'u1',usuario_vinculado_id:'u1',fuso_horario:'America/Recife'},{id:'22222222-2222-2222-2222-222222222222',nome:'Cristina Roichman',dono_id:'u1',usuario_vinculado_id:null,fuso_horario:'America/Recife'}];
+const EV=[
+ {id:'e1',perfil_id:P[0].id,tipo:'consulta',titulo:'Consulta com Filipe Lima (Ortopedia)',inicio:iso(20*H),local:'Clínica Ortoped, sala 3',situacao:'agendado',perfis:{nome:P[0].nome,fuso_horario:'America/Recife'}},
+ {id:'e2',perfil_id:P[1].id,tipo:'exame',titulo:'Exame de sangue',inicio:iso(3*H),local:'Lab Pasteur',situacao:'agendado',perfis:{nome:P[1].nome,fuso_horario:'America/Recife'}},
+ {id:'e3',perfil_id:P[1].id,tipo:'retorno',titulo:'Retorno cardiologista',inicio:iso(5*24*H),local:null,situacao:'agendado',perfis:{nome:P[1].nome,fuso_horario:'America/Recife'}},
+ {id:'e4',perfil_id:P[0].id,tipo:'vacina',titulo:'Vacina gripe',inicio:iso(-6*24*H),local:'Posto',situacao:'realizado',perfis:{nome:P[0].nome,fuso_horario:'America/Recife'}}];
+window.fetch=async(url,opt)=>{const u=decodeURIComponent(String(url));const j=(b)=>new Response(JSON.stringify(b),{status:200,headers:{'Content-Type':'application/json'}});
+ if(u.includes('/perfis')) return j(u.includes('id=eq.')?P.find(p=>u.includes(p.id)):P);
+ if(u.includes('/eventos')) return j(u.includes('id=eq.e1')?{...EV[0],lembrete_vespera:true,lembrete_minutos_antes:120,profissional_id:null,observacoes:'Levar raio-x'}:EV);
+ if(u.includes('/profissionais')) return j([{id:'m1',nome:'Filipe Lima',especialidade:'Ortopedia'}]);
+ if(u.includes('/lembrete_destinatarios')) return j([{perfil_id:P[0].id},{perfil_id:P[1].id}]);
+ return j([]);};
+</script>
+<script type="module">
+import { estado } from './js/base.js'; import { telaAgenda, telaFormEvento, cartaoAgenda } from './js/agenda.js';
+estado.eu={id:'u1',papel:'master'}; estado.delegados=[];
+const modo=location.search.slice(1);
+if(modo==='lista') await telaAgenda();
+if(modo==='form') await telaFormEvento(null,'e1');
+if(modo==='novo') await telaFormEvento(null,null);
+if(modo==='cartao') document.getElementById('app').innerHTML=cartaoAgenda([window.EV?.[0]||{}].slice(0,0))+'';
+</script></body></html>
