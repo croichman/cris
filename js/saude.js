@@ -358,13 +358,30 @@ export async function telaFormMedico(perfilId, id) {
       if (diagnostico) { diag.textContent = `Detalhe técnico: ${diagnostico}`; diag.hidden = false; }
     }
   };
+  // Diagnóstico: se a página recarregar enquanto a agenda está aberta, a marca abaixo sobrevive
+  let marca = null;
+  try { marca = sessionStorage.getItem('cris-agenda-aberta'); sessionStorage.removeItem('cris-agenda-aberta'); } catch {}
+  if (marca && Date.now() - Number(marca) < 5 * 60000) {
+    diag.textContent = 'Detalhe técnico: o app foi recarregado pelo celular enquanto a agenda estava aberta.';
+    diag.hidden = false;
+  }
+
   const bCelular = document.getElementById('do-celular');
   if (bCelular) bCelular.onclick = async () => {
+    try { sessionStorage.setItem('cris-agenda-aberta', String(Date.now())); } catch {}
+    diag.hidden = true;
     try {
       const r = await escolherContato();
+      try { sessionStorage.removeItem('cris-agenda-aberta'); } catch {}
       aplicarContato(r.dados, r.diagnostico);
     } catch (e) {
-      if (e?.name === 'AbortError') return;
+      try { sessionStorage.removeItem('cris-agenda-aberta'); } catch {}
+      if (e?.name === 'AbortError') {
+        aviso('Nenhum contato foi recebido.');
+        diag.textContent = `Detalhe técnico: o celular cancelou a escolha (AbortError${e?.message ? ': ' + e.message : ''}).`;
+        diag.hidden = false;
+        return;
+      }
       aviso('Não foi possível ler o contato do celular.');
       diag.textContent = `Detalhe técnico: ${e?.name || ''} ${e?.message || e}`;
       diag.hidden = false;
