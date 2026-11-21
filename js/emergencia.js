@@ -2,6 +2,7 @@
 // Mostra o essencial para um atendimento de urgência. Cada ficha aberta fica
 // salva neste aparelho e abre mesmo sem internet. É apagada ao sair do CRIS.
 import { sb, app, estado, esc, idade, dataBR, corDoPerfil, primeiroNome, hhmm, descreverDias } from './base.js';
+import { formatarTelefone } from './contatos.js';
 import { medicosDoPerfil, contatosMedico } from './saude.js';
 
 const CHAVE = (id) => `cris-ficha-${id}`;
@@ -62,7 +63,7 @@ async function buscarFicha(id) {
 function htmlFicha(f, offline) {
   const p = f.perfil;
   const i = idade(p.data_nascimento);
-  const tel = (t) => t ? `<a href="tel:${esc(t.replace(/[^\d+]/g, ''))}">${esc(t)}</a>` : '';
+  const tel = (t) => t ? `<a href="tel:${esc(t.replace(/[^\d+]/g, ''))}">${esc(formatarTelefone(t))}</a>` : '';
   const salvo = new Date(f.salvoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
   return `

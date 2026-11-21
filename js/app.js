@@ -1,4 +1,5 @@
 // CRIS — app principal: login, perfis, conta e rotas
+import { formatarTelefone } from './contatos.js';
 import {
   sb, app, estado, esc, aviso, idade, dataBR, corDoPerfil, primeiroNome, mensagemErro,
   ocupado, mostrarErro, acessoAoPerfil
@@ -364,7 +365,7 @@ async function telaPerfil(id) {
   const i = idade(p.data_nascimento);
 
   const linha = (rotulo, valor) => valor ? `<dt>${rotulo}</dt><dd>${valor}</dd>` : '';
-  const tel = (t) => t ? `<a class="ligar" href="tel:${esc(t.replace(/[^\d+]/g, ''))}">${esc(t)}</a>` : '';
+  const tel = (t) => t ? `<a class="ligar" href="tel:${esc(t.replace(/[^\d+]/g, ''))}">${esc(formatarTelefone(t))}</a>` : '';
 
   const textoAcesso = {
     gerenciar: '',

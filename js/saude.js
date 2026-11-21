@@ -1,5 +1,5 @@
 // CRIS — alergias, condições de saúde, vacinas e médicos
-import { temSeletorDeContatos, escolherContato, lerVcard, preencherFormulario, lerContatoCompartilhado } from './contatos.js';
+import { temSeletorDeContatos, escolherContato, lerVcard, preencherFormulario, lerContatoCompartilhado, formatarTelefone } from './contatos.js';
 import {
   sb, app, estado, esc, aviso, dataBR, primeiroNome, mensagemErro, ocupado, mostrarErro,
   perfilComAcesso, hojeNoFuso, enviarFoto, apagarFotos, linksDasFotos, acessoAoPerfil
@@ -235,7 +235,7 @@ export function contatosMedico(m) {
   const zap = (m.whatsapp || '').replace(/\D/g, '');
   const tel = (m.telefone || '').replace(/[^\d+]/g, '');
   return [
-    tel && `<a class="contato" href="tel:${esc(tel)}">Ligar: ${esc(m.telefone)}</a>`,
+    tel && `<a class="contato" href="tel:${esc(tel)}">Ligar: ${esc(formatarTelefone(m.telefone))}</a>`,
     zap && `<a class="contato" href="https://wa.me/${zap.length <= 11 ? '55' + zap : zap}" target="_blank" rel="noopener">WhatsApp</a>`,
     m.email && `<a class="contato" href="mailto:${esc(m.email)}">E-mail</a>`
   ].filter(Boolean).join('');
